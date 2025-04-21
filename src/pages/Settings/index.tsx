@@ -1,11 +1,25 @@
-import React from 'react';
-import { Moon, Sun, Type, Bell, Shield, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Moon, Sun, Type, Bell, Shield, HelpCircle, Trash2 } from 'lucide-react';
 import Header from '../../components/Header';
 import Navbar from '../../components/Navbar';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useUser } from '../../contexts/UserContext';
+import { useNavigate } from 'react-router-dom';
 
 const Settings = () => {
   const { theme, fontSize, toggleTheme, setFontSize } = useTheme();
+  const { signOut } = useUser();
+  const navigate = useNavigate();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-violet-50 dark:bg-gray-900">
@@ -87,7 +101,56 @@ const Settings = () => {
             />
           </div>
         </div>
+
+        {/* Account Deletion */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div>
+                <p className="font-medium text-gray-900 dark:text-gray-100">Delete Account</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Permanently delete your account and all associated data
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Delete Account
+            </button>
+          </div>
+        </div>
       </main>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">
+              Delete Account
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Navbar />
     </div>

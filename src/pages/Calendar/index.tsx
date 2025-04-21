@@ -14,32 +14,42 @@ const Calendar = () => {
     setSelectedDate,
     setIsModalOpen,
     addEvent,
+    deleteEvent,
   } = useCalendar();
 
   return (
     <div className="min-h-screen bg-violet-50 dark:bg-gray-900">
       <Header title="Calendar" showChildSelector />
 
-      <main className="max-w-lg mx-auto p-4 pb-20 space-y-6">
-        <CalendarGrid
-          selectedDate={selectedDate}
-          events={events}
-          onSelectDate={setSelectedDate}
-        />
-        
-        <EventList 
-          selectedDate={selectedDate}
-          events={events}
-          onAddEvent={() => setIsModalOpen(true)}
-        />
-
-        <AddEventModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onAdd={addEvent}
-          selectedDate={selectedDate}
-        />
+      <main className="p-4 md:p-6 max-w-screen-xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Calendar Grid - Full width on mobile, 8 columns on large screens */}
+          <div className="lg:col-span-8">
+            <CalendarGrid
+              selectedDate={selectedDate}
+              events={events}
+              onSelectDate={setSelectedDate}
+            />
+          </div>
+          
+          {/* Event List - Full width on mobile, 4 columns on large screens */}
+          <div className="lg:col-span-4">
+            <EventList 
+              selectedDate={selectedDate}
+              events={events}
+              onAddEvent={() => setIsModalOpen(true)}
+              onDeleteEvent={deleteEvent}
+            />
+          </div>
+        </div>
       </main>
+
+      <AddEventModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAdd={addEvent}
+        selectedDate={selectedDate}
+      />
 
       <Navbar />
     </div>

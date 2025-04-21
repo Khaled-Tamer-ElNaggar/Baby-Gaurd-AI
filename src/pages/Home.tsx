@@ -19,25 +19,49 @@ const Home = () => {
     <div className="min-h-screen bg-violet-50 dark:bg-gray-900">
       <Header title="Home" showChildSelector />
 
-      <main className="max-w-lg mx-auto p-4 space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm">
-          <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200">
-            Welcome back, {user.full_name}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {currentChild 
-              ? `Tracking ${currentChild.name}'s journey`
-              : user.user_type === 'pregnant' 
-                ? 'Track your pregnancy journey'
-                : 'Monitor your baby\'s growth'}
-          </p>
-        </div>
+      <main className="p-4 md:p-6 max-w-screen-xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Welcome Card - Full width on mobile, 8 columns on large screens */}
+          <div className="lg:col-span-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm">
+              <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200">
+                Welcome back, {user.full_name}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                {currentChild 
+                  ? `Tracking ${currentChild.name}'s journey`
+                  : user.user_type === 'pregnant' 
+                    ? 'Track your pregnancy journey'
+                    : 'Monitor your baby\'s growth'}
+              </p>
+            </div>
+          </div>
 
-        <HealthOverview />
-        <Appointments />
-        <Gallery />
-        <Recipes />
-        <Exercises />
+          {/* Health Overview - Full width on mobile, 4 columns on large screens */}
+          <div className="lg:col-span-4">
+            <HealthOverview />
+          </div>
+
+          {/* Appointments - Full width on mobile, 6 columns on large screens */}
+          <div className="lg:col-span-6">
+            <Appointments />
+          </div>
+
+          {/* Gallery - Full width on mobile, 6 columns on large screens */}
+          <div className="lg:col-span-6">
+            <Gallery />
+          </div>
+
+          {/* Recipes - Full width on mobile, 12 columns on large screens */}
+          <div className="lg:col-span-12">
+            <Recipes />
+          </div>
+
+          {/* Exercises - Full width on mobile, 12 columns on large screens */}
+          <div className="lg:col-span-12">
+            <Exercises />
+          </div>
+        </div>
       </main>
 
       <Navbar />

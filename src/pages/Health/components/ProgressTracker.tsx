@@ -35,9 +35,9 @@ const ProgressTracker = () => {
   }, [completion]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-sm min-h-[600px] flex flex-col justify-between">
       <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200 mb-3">Daily Progress</h2>
-      <div className="relative w-48 h-48 mx-auto">
+      <div className="relative w-48 h-46 mx-auto">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50"

@@ -6,7 +6,15 @@ export const useCalendar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const addEvent = (newEvent) => {
-    setEvents(prev => [...prev, newEvent]);
+    const eventWithId = {
+      ...newEvent,
+      id: Date.now().toString()
+    };
+    setEvents(prev => [...prev, eventWithId]);
+  };
+
+  const deleteEvent = (eventId) => {
+    setEvents(prev => prev.filter(event => event.id !== eventId));
   };
 
   return {
@@ -16,6 +24,7 @@ export const useCalendar = () => {
     setSelectedDate,
     setIsModalOpen,
     addEvent,
+    deleteEvent,
   };
 };
 

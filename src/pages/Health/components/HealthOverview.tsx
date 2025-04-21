@@ -62,7 +62,7 @@ const HealthOverview = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm" >
       <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200 mb-3">Health Overview</h2>
       <div className="grid grid-cols-3 gap-3">
         <MetricCard

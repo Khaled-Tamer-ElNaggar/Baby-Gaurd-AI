@@ -76,129 +76,13 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Sample data for development
-const initialHealthMetrics: HealthMetric[] = [
-  {
-    id: '1',
-    child_id: '1',
-    type: 'water',
-    value: 2,
-    unit: 'L',
-    date: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    child_id: '1',
-    type: 'sleep',
-    value: 8,
-    unit: 'hours',
-    date: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    child_id: '2',
-    type: 'water',
-    value: 1.5,
-    unit: 'L',
-    date: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    child_id: '2',
-    type: 'sleep',
-    value: 10,
-    unit: 'hours',
-    date: new Date().toISOString(),
-  },
-];
-
-const initialVaccinations: Vaccination[] = [
-  {
-    id: '1',
-    child_id: '1',
-    name: 'Tdap',
-    date: '2024-02-15',
-    nextDue: '2024-08-15',
-    notes: 'Required during pregnancy',
-  },
-  {
-    id: '2',
-    child_id: '2',
-    name: 'MMR',
-    date: '2023-05-10',
-    nextDue: '2026-05-10',
-    notes: 'Measles, Mumps, Rubella',
-  },
-];
-
-const initialActivities: Activity[] = [
-  {
-    id: '1',
-    child_id: '1',
-    type: 'exercise',
-    title: 'Prenatal Yoga',
-    duration: 30,
-    date: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    child_id: '2',
-    type: 'exercise',
-    title: 'Toddler Playtime',
-    duration: 45,
-    date: new Date().toISOString(),
-  },
-];
-
-const initialAppointments: Appointment[] = [
-  {
-    id: '1',
-    child_id: '1',
-    title: 'Regular Checkup',
-    date: '2024-03-01',
-    time: '10:00',
-    doctor: 'Dr. Smith',
-    location: 'City Hospital',
-  },
-  {
-    id: '2',
-    child_id: '2',
-    title: 'Pediatrician Visit',
-    date: '2024-03-15',
-    time: '14:30',
-    doctor: 'Dr. Johnson',
-    location: 'Children\'s Clinic',
-  },
-];
-
-const initialMemories: Memory[] = [
-  {
-    id: '1',
-    child_id: '1',
-    photo: 'https://images.unsplash.com/photo-1557166983-5939644443b7?w=500&h=500&fit=crop',
-    caption: 'First Ultrasound',
-    date: new Date().toISOString(),
-    likes: 0,
-    comments: 0,
-  },
-  {
-    id: '2',
-    child_id: '2',
-    photo: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=500&h=500&fit=crop',
-    caption: 'First Steps',
-    date: new Date().toISOString(),
-    likes: 0,
-    comments: 0,
-  },
-];
-
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentChild } = useUser();
-  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>(initialHealthMetrics);
-  const [vaccinations, setVaccinations] = useState<Vaccination[]>(initialVaccinations);
-  const [activities, setActivities] = useState<Activity[]>(initialActivities);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
-  const [memories, setMemories] = useState<Memory[]>(initialMemories);
+  const [healthMetrics, setHealthMetrics] = useState<HealthMetric[]>([]);
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
 
   // Filter data based on current child
   const filteredHealthMetrics = healthMetrics.filter(

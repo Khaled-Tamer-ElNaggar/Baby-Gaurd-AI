@@ -1,8 +1,8 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 
-const EventList = ({ selectedDate, events, onAddEvent }) => {
+const EventList = ({ selectedDate, events, onAddEvent, onDeleteEvent }) => {
   const dayEvents = events.filter(event => 
     isSameDay(new Date(event.date), selectedDate)
   );
@@ -22,7 +22,7 @@ const EventList = ({ selectedDate, events, onAddEvent }) => {
       </div>
 
       {dayEvents.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+        <p className="text-center text-gray-500 dark:text-gray-400 py-4">
           No events scheduled for this day
         </p>
       ) : (
@@ -36,10 +36,16 @@ const EventList = ({ selectedDate, events, onAddEvent }) => {
                 <div>
                   <h3 className="font-medium text-violet-900 dark:text-violet-200">{event.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{event.description}</p>
+                  <span className="text-sm text-violet-600 dark:text-violet-400">
+                    {format(new Date(event.date), 'h:mm a')}
+                  </span>
                 </div>
-                <span className="text-sm text-violet-600 dark:text-violet-400">
-                  {format(new Date(event.date), 'h:mm a')}
-                </span>
+                <button
+                  onClick={() => onDeleteEvent(event.id)}
+                  className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
             </div>
           ))}

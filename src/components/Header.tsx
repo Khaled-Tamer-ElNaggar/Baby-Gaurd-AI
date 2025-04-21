@@ -7,9 +7,14 @@ import ChildSelector from './ChildSelector';
 interface HeaderProps {
   title: string;
   showChildSelector?: boolean;
+  children?: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, showChildSelector = false }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  title, 
+  showChildSelector = false,
+  children
+}) => {
   const [showMenu, setShowMenu] = useState(false);
   const { user, signOut } = useUser();
   const navigate = useNavigate();
@@ -17,6 +22,7 @@ const Header: React.FC<HeaderProps> = ({ title, showChildSelector = false }) => 
   return (
     <header className="bg-white dark:bg-gray-800 p-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
+        {children}
         <h1 className="text-xl font-semibold text-violet-900 dark:text-violet-200">{title}</h1>
         {showChildSelector && <ChildSelector showAddButton onAddClick={() => navigate('/profile')} />}
       </div>
