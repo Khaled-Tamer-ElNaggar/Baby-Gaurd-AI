@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Exercises = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const navigate = useNavigate();
 
   const exercises = [
     {
@@ -28,83 +30,89 @@ const Exercises = () => {
       title: "Swimming",
       duration: "25 mins",
       level: "Intermediate"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1599447421416-3414500d18a5?w=500&h=300&fit=crop",
-      title: "Pilates",
-      duration: "20 mins",
-      level: "Intermediate"
-    },
-    {
-      image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop",
-      title: "Breathing Exercises",
-      duration: "10 mins",
-      level: "All Levels"
     }
   ];
 
-  const slidesPerView = window.innerWidth >= 1024 ? 3 : 2;
-  const totalSlides = Math.ceil(exercises.length / slidesPerView);
+  // Randomly shuffle exercises on component mount
+  React.useEffect(() => {
+    const shuffledIndex = Math.floor(Math.random() * (exercises.length - 3));
+    setCurrentSlide(shuffledIndex);
+  }, []);
+
+  const visibleExercises = exercises.slice(currentSlide, currentSlide + 3);
+  const canSlideLeft = currentSlide > 0;
+  const canSlideRight = currentSlide < exercises.length - 3;
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+    if (canSlideRight) {
+      setCurrentSlide(prev => prev + 1);
+    }
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+    if (canSlideLeft) {
+      setCurrentSlide(prev => prev - 1);
+    }
   };
 
   return (
     <section className="space-y-3 mb-20">
-      <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200">Exercises</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200">Exercises</h2>
+        <button 
+          onClick={() => navigate('/recommendations')}
+          className="flex items-center gap-2 text-violet-600 dark:text-violet-400 hover:underline"
+        >
+          View All
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+      
       <div className="relative">
-        <div className="flex space-x-4 overflow-hidden">
+        <div className="overflow-hidden">
           <div
-            className="flex space-x-4 transition-transform duration-300"
+            className="flex gap-4 transition-transform duration-300 ease-in-out"
             style={{
-              transform: `translateX(-${currentSlide * 100}%)`,
+              transform: `translateX(-${currentSlide * (100 / 3)}%)`,
+              width: `${(exercises.length / 3) * 100}%`
             }}
           >
             {exercises.map((exercise, index) => (
-              <ExerciseCard key={index} {...exercise} />
+              <div
+                key={index}
+                className="flex-shrink-0"
+                style={{ width: `${100 / exercises.length}%` }}
+              >
+                <ExerciseCard {...exercise} />
+              </div>
             ))}
           </div>
         </div>
 
-        <button
-          onClick={prevSlide}
-          className="absolute left-0 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-violet-600 dark:text-violet-400"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+        {canSlideLeft && (
+          <button
+            onClick={prevSlide}
+            className="absolute left-0 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-violet-600 dark:text-violet-400"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
 
-        <button
-          onClick={nextSlide}
-          className="absolute right-0 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-violet-600 dark:text-violet-400"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-
-        <div className="absolute bottom-0 left-0 right-0 flex justify-center space-x-1">
-          {Array.from({ length: totalSlides }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                currentSlide === index
-                  ? 'bg-violet-600 dark:bg-violet-400'
-                  : 'bg-violet-200 dark:bg-violet-800'
-              }`}
-            />
-          ))}
-        </div>
+        {canSlideRight && (
+          <button
+            onClick={nextSlide}
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-violet-600 dark:text-violet-400"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </section>
   );
 };
 
 const ExerciseCard = ({ image, title, duration, level }) => (
-  <div className="flex-shrink-0 w-48">
+  <div className="flex-shrink-0 w-full">
     <div className="relative">
       <img
         src={image}

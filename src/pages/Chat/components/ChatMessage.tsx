@@ -1,12 +1,13 @@
 import React from 'react';
 
 type MessageProps = {
+  id: string;
   isAi: boolean;
   message: string;
   timestamp: string;
 };
 
-const ChatMessage = ({ isAi, message, timestamp }: MessageProps) => {
+const ChatMessage = ({ id, isAi, message, timestamp }: MessageProps) => {
   return (
     <div className={`flex ${isAi ? 'justify-start' : 'justify-end'} mb-4`}>
       <div
@@ -24,4 +25,5 @@ const ChatMessage = ({ isAi, message, timestamp }: MessageProps) => {
     </div>
   );
 };
+
 export default ChatMessage;

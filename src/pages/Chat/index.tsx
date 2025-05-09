@@ -8,7 +8,14 @@ import useChat from './hooks/useChat';
 import { Menu, X } from 'lucide-react';
 
 const Chat = () => {
-  const { messages, conversations, sendMessage, selectConversation, currentConversationId } = useChat();
+  const { 
+    messages, 
+    conversations, 
+    sendMessage, 
+    selectConversation, 
+    deleteConversation,
+    currentConversationId 
+  } = useChat();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   return (
@@ -49,6 +56,7 @@ const Chat = () => {
                 selectConversation(id);
                 setIsHistoryOpen(false);
               }}
+              onDelete={deleteConversation}
             />
           </div>
 
@@ -61,6 +69,7 @@ const Chat = () => {
                     {messages.map((message) => (
                       <ChatMessage
                         key={message.id}
+                        id={message.id}
                         isAi={message.isAi}
                         message={message.text}
                         timestamp={message.timestamp}

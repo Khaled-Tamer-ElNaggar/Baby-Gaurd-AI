@@ -18,7 +18,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 py-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 py-2 z-40">
         <div className="max-w-lg mx-auto flex justify-around items-center">
           {navItems.map((item) => (
             <button
@@ -41,6 +41,9 @@ const Navbar = () => {
         isOpen={isMoreMenuOpen} 
         onClose={() => setIsMoreMenuOpen(false)} 
       />
+
+      {/* Add bottom padding to account for navbar height */}
+      <div className="h-20" />
     </>
   );
 };

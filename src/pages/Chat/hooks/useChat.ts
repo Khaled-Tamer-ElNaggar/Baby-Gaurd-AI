@@ -47,7 +47,6 @@ export const useChat = () => {
 
     setMessages(prev => [...prev, userMessage]);
     
-    // Update conversation last message
     setConversations(prev => 
       prev.map(conv => 
         conv.id === currentConversationId
@@ -56,7 +55,6 @@ export const useChat = () => {
       )
     );
 
-    // Simulate AI response
     setTimeout(() => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -67,7 +65,6 @@ export const useChat = () => {
       };
       setMessages(prev => [...prev, aiMessage]);
       
-      // Update conversation last message with AI response
       setConversations(prev => 
         prev.map(conv => 
           conv.id === currentConversationId
@@ -76,6 +73,24 @@ export const useChat = () => {
         )
       );
     }, 1000);
+  };
+
+  const deleteMessage = (messageId: string) => {
+    setMessages(prev => prev.filter(message => message.id !== messageId));
+  };
+
+  const deleteConversation = (conversationId: string) => {
+    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    setMessages(prev => prev.filter(message => message.conversationId !== conversationId));
+    
+    if (currentConversationId === conversationId) {
+      const remainingConversations = conversations.filter(conv => conv.id !== conversationId);
+      if (remainingConversations.length > 0) {
+        setCurrentConversationId(remainingConversations[0].id);
+      } else {
+        selectConversation('new');
+      }
+    }
   };
 
   const selectConversation = (id: string) => {
@@ -92,8 +107,6 @@ export const useChat = () => {
       setMessages([]);
     } else {
       setCurrentConversationId(id);
-      // Filter messages for selected conversation
-      // In a real app, you'd fetch messages from the server here
     }
   };
 
@@ -102,6 +115,8 @@ export const useChat = () => {
     conversations,
     currentConversationId,
     sendMessage,
+    deleteMessage,
+    deleteConversation,
     selectConversation,
   };
 };

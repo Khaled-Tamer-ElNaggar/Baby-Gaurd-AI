@@ -5,7 +5,7 @@ import { useUser } from './UserContext';
 interface HealthMetric {
   id: string;
   child_id?: string;
-  type: 'water' | 'sleep' | 'steps' | 'weight';
+  type: 'water' | 'sleep' | 'steps' | 'weight' | 'height' | 'size';
   value: number;
   unit: string;
   date: string;
@@ -72,6 +72,7 @@ interface DataContextType {
   addMemory: (memory: Omit<Memory, 'id' | 'likes' | 'comments'>) => void;
   updateMemory: (id: string, updates: Partial<Memory>) => void;
   deleteMemory: (id: string) => void;
+  updateBabyMetrics: (metrics: { size?: string; weight?: string; height?: string }) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -202,6 +203,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMemories(prev => prev.filter(memory => memory.id !== id));
   };
 
+  const updateBabyMetrics = (metrics: { size?: string; weight?: string; height?: string }) => {
+    const now = new Date().toISOString();
+    
+    if (metrics.weight) {
+      addHealthMetric({
+        type: 'weight',
+        value: parseFloat(metrics.weight),
+        unit: 'kg',
+        date: now
+      });
+    }
+    
+    if (metrics.height) {
+      addHealthMetric({
+        type: 'height',
+        value: parseFloat(metrics.height),
+        unit: 'cm',
+        date: now
+      });
+    }
+    
+    if (metrics.size) {
+      addHealthMetric({
+        type: 'size',
+        value: parseFloat(metrics.size),
+        unit: 'cm',
+        date: now
+      });
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -225,6 +257,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addMemory,
         updateMemory,
         deleteMemory,
+        updateBabyMetrics,
       }}
     >
       {children}

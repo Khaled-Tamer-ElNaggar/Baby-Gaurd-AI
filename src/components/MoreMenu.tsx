@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Activity, Settings } from 'lucide-react';
+import { Image, Activity, Settings, Book } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface MoreMenuProps {
@@ -14,6 +14,7 @@ const MoreMenu: React.FC<MoreMenuProps> = ({ isOpen, onClose }) => {
 
   const menuItems = [
     { icon: <Image />, label: 'Gallery', path: '/gallery' },
+    { icon: <Book />, label: 'Recommendations', path: '/recommendations' },
     { icon: <Activity />, label: 'Wellness', path: '/wellness' },
     { icon: <Settings />, label: 'Settings', path: '/settings' },
   ];

@@ -10,12 +10,16 @@ const Gallery = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const { memories, addMemory, deleteMemory, updateMemory } = useData();
 
-  const handleAddMemory = (memory) => {
-    addMemory({
-      photo: URL.createObjectURL(memory.photo),
-      caption: memory.caption,
-      date: memory.date
-    });
+  const handleAddMemory = async (memory) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      addMemory({
+        photo: reader.result as string,
+        caption: memory.caption,
+        date: memory.date
+      });
+    };
+    reader.readAsDataURL(memory.photo);
   };
 
   return (

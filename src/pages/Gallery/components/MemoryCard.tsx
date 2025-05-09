@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { Heart, MessageCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import EditMemoryModal from './EditMemoryModal';
 
-const MemoryCard = ({ id, image, caption, date, likes = 0, comments = 0, onDelete, onEdit }) => {
+const MemoryCard = ({ id, image, photo, caption, date, likes = 0, comments = 0, onDelete, onEdit }) => {
   const [showActions, setShowActions] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -11,7 +11,7 @@ const MemoryCard = ({ id, image, caption, date, likes = 0, comments = 0, onDelet
     <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
       <div className="relative aspect-square">
         <img
-          src={image}
+          src={photo || image}
           alt={caption}
           className="w-full h-full object-cover"
         />
@@ -82,4 +82,5 @@ const MemoryCard = ({ id, image, caption, date, likes = 0, comments = 0, onDelet
     </div>
   );
 };
+
 export default MemoryCard;

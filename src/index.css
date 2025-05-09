@@ -16,3 +16,14 @@
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
 }
+
+/* Add global styles for main content area */
+main {
+  min-height: calc(100vh - theme('spacing.16')); /* Account for header */
+  padding-bottom: theme('spacing.24'); /* Extra padding for navbar */
+}
+
+/* Ensure scrollable content has proper bottom padding */
+.overflow-y-auto, .overflow-auto {
+  padding-bottom: theme('spacing.20');
+}

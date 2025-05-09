@@ -1,25 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useData } from '../../../contexts/DataContext';
 
 export const useCalendar = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [events, setEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { appointments, addAppointment, deleteAppointment } = useData();
 
   const addEvent = (newEvent) => {
     const eventWithId = {
       ...newEvent,
       id: Date.now().toString()
     };
-    setEvents(prev => [...prev, eventWithId]);
+    addAppointment(eventWithId);
   };
 
   const deleteEvent = (eventId) => {
-    setEvents(prev => prev.filter(event => event.id !== eventId));
+    deleteAppointment(eventId);
   };
 
   return {
     selectedDate,
-    events,
+    events: appointments,
     isModalOpen,
     setSelectedDate,
     setIsModalOpen,
