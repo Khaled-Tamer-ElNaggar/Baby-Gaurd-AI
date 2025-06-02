@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useUser } from '../../contexts/UserContext';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Mail, Lock } from 'lucide-react';
+import { auth, LoginData } from '../../lib/api.ts'; // Import auth from api.txt
 
 const Login = () => {
-  const { signIn } = useUser();
+  const navigate = useNavigate(); // Initialize navigate
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -48,10 +48,18 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await signIn(formData.email.toLowerCase(), formData.password);
+      // Prepare data for API
+      const loginData: LoginData = {
+        user_email: formData.email.toLowerCase(),
+        user_pass: formData.password,
+      };
+      const response = await auth.login(loginData);
+      if (response.token) {
+        window.location.href = '/home'; //navigate('/home'); // Navigate to home on successful login  
+      }
     } catch (error: any) {
       console.error('Login error:', error);
-      setError(error.message || 'Invalid email or password');
+      setError(error.response?.data?.error || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

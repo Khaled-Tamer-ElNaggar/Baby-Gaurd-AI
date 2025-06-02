@@ -15,9 +15,9 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
   const { children, currentChild, setCurrentChild } = useUser();
   const [isOpen, setIsOpen] = useState(false);
 
-  if (children.length === 0) {
-    return null;
-  }
+  // if (children.length === 0) {                             //////////////////////////////////////////////////////////////
+  //   return null;                                       //////////////////////////////////////////////////////////////
+  // }                                               //////////////////////////////////////////////////////////////
 
   return (
     <div className="relative">

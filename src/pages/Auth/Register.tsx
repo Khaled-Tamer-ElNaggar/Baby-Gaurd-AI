@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, AlertTriangle } from 'lucide-react';
+import { auth, RegisterData } from '../../lib/api.ts' ; // Import auth from api.txt
 
 const Register = () => {
   const navigate = useNavigate();
@@ -11,26 +12,58 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    expectedDueDate: '',
-    hasHealthConditions: false,
-    healthConditions: '',
+    user_birthday: '',
+    blood_type: '',
   });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: value
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < 3) {
+    setError(null);
+
+    if (step < 2) {
+      // Validate step 1
+      if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+        setError('All fields are required');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
       setStep(step + 1);
     } else {
-      // Handle registration
-      navigate('/home');
+      // Validate step 2
+      if (!formData.user_birthday || !formData.blood_type) {
+        setError('Birthday and blood type are required');
+        return;
+      }
+
+      // Prepare data for API
+      const registerData: RegisterData = {
+        user_name: formData.name,
+        user_email: formData.email,
+        user_pass: formData.password,
+        user_birthday: formData.user_birthday,
+        blood_type: formData.blood_type,
+      };
+
+      try {
+        const response = await auth.register(registerData);
+        if (response.token) {
+          navigate('/home');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      }
     }
   };
 
@@ -40,7 +73,7 @@ const Register = () => {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
           {/* Progress Steps */}
           <div className="flex justify-between mb-8">
-            {[1, 2, 3].map((s) => (
+            {[1, 2].map((s) => (
               <div
                 key={s}
                 className={`w-8 h-8 rounded-full flex items-center justify-center
@@ -51,6 +84,13 @@ const Register = () => {
               </div>
             ))}
           </div>
+
+          {error && (
+            <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-500" />
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {step === 1 && (
@@ -131,93 +171,45 @@ const Register = () => {
             {step === 2 && (
               <div className="space-y-6 animate-fade-in">
                 <h2 className="text-2xl font-semibold text-violet-900 dark:text-violet-200 mb-6">
-                  Tell Us About You
+                  Additional Information
                 </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setUserType('pregnant')}
-                    className={`p-4 rounded-xl border-2 transition-all
-                              ${userType === 'pregnant'
-                                ? 'border-violet-600 bg-violet-50 dark:bg-violet-900'
-                                : 'border-gray-200 dark:border-gray-700'}`}
-                  >
-                    <span className="block text-sm font-medium text-gray-900 dark:text-gray-200">
-                      Expecting
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserType('parent')}
-                    className={`p-4 rounded-xl border-2 transition-all
-                              ${userType === 'parent'
-                                ? 'border-violet-600 bg-violet-50 dark:bg-violet-900'
-                                : 'border-gray-200 dark:border-gray-700'}`}
-                  >
-                    <span className="block text-sm font-medium text-gray-900 dark:text-gray-200">
-                      New Parent
-                    </span>
-                  </button>
-                </div>
-                {userType === 'pregnant' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Expected Due Date
-                    </label>
-                    <input
-                      type="date"
-                      name="expectedDueDate"
-                      value={formData.expectedDueDate}
-                      onChange={handleInputChange}
-                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl
-                               dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-6 animate-fade-in">
-                <h2 className="text-2xl font-semibold text-violet-900 dark:text-violet-200 mb-6">
-                  Health Information
-                </h2>
-                <div className="flex items-center space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-                  <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    Please consult with your healthcare provider if you have any serious health conditions.
-                  </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Birthday
+                  </label>
+                  <input
+                    type="date"
+                    name="user_birthday"
+                    value={formData.user_birthday}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl
+                             dark:bg-gray-700 dark:text-white"
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      name="hasHealthConditions"
-                      checked={formData.hasHealthConditions}
-                      onChange={handleInputChange}
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      I have health conditions to report
-                    </span>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Blood Type
                   </label>
+                  <select
+                    name="blood_type"
+                    value={formData.blood_type}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl
+                             dark:bg-gray-700 dark:text-white"
+                    required
+                  >
+                    <option value="">Select Blood Type</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
                 </div>
-                {formData.hasHealthConditions && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Please describe any health conditions
-                    </label>
-                    <textarea
-                      name="healthConditions"
-                      value={formData.healthConditions}
-                      onChange={handleInputChange}
-                      className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-xl
-                               dark:bg-gray-700 dark:text-white"
-                      rows={4}
-                    />
-                  </div>
-                )}
               </div>
             )}
 
@@ -237,7 +229,7 @@ const Register = () => {
                 className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700
                          dark:bg-violet-500 dark:hover:bg-violet-600 ml-auto"
               >
-                {step === 3 ? 'Complete Registration' : 'Continue'}
+                {step === 2 ? 'Complete Registration' : 'Continue'}
               </button>
             </div>
           </form>
