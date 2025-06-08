@@ -55,7 +55,17 @@ const Login = () => {
       };
       const response = await auth.login(loginData);
       if (response.token) {
+
         window.location.href = '/home'; //navigate('/home'); // Navigate to home on successful login  
+
+          // After successful login
+        localStorage.setItem('userData', JSON.stringify({
+          id: response.user.id,
+          username: response.user.name,
+          email: response.user.email,
+          dateOfBirth: response.user.birthday,
+          bloodType: response.user.blood_type
+          }));
       }
     } catch (error: any) {
       console.error('Login error:', error);

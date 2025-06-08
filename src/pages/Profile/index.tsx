@@ -6,7 +6,7 @@ import { Mail, Calendar, Baby, User, Plus } from 'lucide-react';
 import AddChildModal from './components/AddChildModal';
 import EditChildModal from './components/EditChildModal';
 import ChildCard from './components/ChildCard';
-import { Child } from '../../lib/supabase';
+//import { Child } from '../../lib/supabase';
 
 const Profile = () => {
   const { user, children, deleteChild } = useUser();

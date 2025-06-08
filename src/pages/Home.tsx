@@ -15,6 +15,8 @@ const Home = () => {
     return null;
   }
 
+  const username = JSON.parse(localStorage.getItem('userData')).username;
+
   return (
     <div className="min-h-screen bg-violet-50 dark:bg-gray-900">
       <Header title="Home" showChildSelector />
@@ -25,7 +27,7 @@ const Home = () => {
           <div className="lg:col-span-8">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm">
               <h2 className="text-lg font-medium text-violet-900 dark:text-violet-200">
-                Welcome back, {user.full_name}
+                Welcome back, {username}
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
                 {currentChild 
