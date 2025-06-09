@@ -104,7 +104,7 @@ def login():
 
         cursor = connection.cursor(dictionary=True)
         cursor.execute("""
-            SELECT id, user_name, user_email, user_pass, user_birthday, blood_type
+            SELECT id, user_name, user_email, user_pass, user_birthday, blood_type, join_date
             FROM users
             WHERE user_email = %s
         """, (data['user_email'],))
@@ -123,7 +123,8 @@ def login():
                 'name': user['user_name'],
                 'email': user['user_email'],
                 'birthday': user['user_birthday'],
-                'blood_type': user['blood_type']
+                'blood_type': user['blood_type'],
+                'join_date': user['join_date']                
             }
         }), 200
     except Error as e:

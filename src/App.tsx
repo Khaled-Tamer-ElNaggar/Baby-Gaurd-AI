@@ -16,6 +16,7 @@ import Gallery from './pages/Gallery';
 import Wellness from './pages/Wellness';
 import Settings from './pages/Settings';
 import Recommendations from './pages/Recommendations';
+import Developers from './pages/Developers';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -73,6 +74,7 @@ const AppRoutes = () => {
       <Route path="/wellness" element={<ProtectedRoute><Wellness /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+      <Route path="/developers" element={<ProtectedRoute><Developers /></ProtectedRoute>} />
 
       {/* Fallback route */}
       <Route path="*" element={<Navigate to="/" replace />} />

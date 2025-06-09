@@ -64,7 +64,8 @@ const Login = () => {
           username: response.user.name,
           email: response.user.email,
           dateOfBirth: response.user.birthday,
-          bloodType: response.user.blood_type
+          bloodType: response.user.blood_type,
+          joinDate: response.user.join_date
           }));
       }
     } catch (error: any) {

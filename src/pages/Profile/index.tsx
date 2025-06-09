@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../../components/Header';
 import Navbar from '../../components/Navbar';
 import { useUser } from '../../contexts/UserContext';
@@ -6,13 +6,41 @@ import { Mail, Calendar, Baby, User, Plus } from 'lucide-react';
 import AddChildModal from './components/AddChildModal';
 import EditChildModal from './components/EditChildModal';
 import ChildCard from './components/ChildCard';
-//import { Child } from '../../lib/supabase';
+
+// تعريف مؤقت للـ Child لو مش معرف
+interface Child {
+  id: string;
+  name: string;
+  birthdate: string;
+  gender: string;
+}
 
 const Profile = () => {
-  const { user, children, deleteChild } = useUser();
+  // لو عندك Context شغالة ممكن تفعل دول
+  // const { user, children, deleteChild } = useUser();
+
+  const [username, setUsername] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [joinDate, setJoinDate] = useState<string | null>(null);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+
+  // لتفادي crash لو localStorage مفيهوش البيانات
+  useEffect(() => {
+    const userDataString = localStorage.getItem('userData');
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        setUsername(userData?.username || 'Unknown');
+        setEmail(userData?.email || 'Not Provided');
+        setJoinDate(userData?.joinDate || 'Unknown');
+      } catch (error) {
+        console.error('Failed to parse userData from localStorage', error);
+      }
+    }
+  }, []);
 
   const handleEditChild = (child: Child) => {
     setSelectedChild(child);
@@ -20,7 +48,7 @@ const Profile = () => {
   };
 
   const handleDeleteChild = (id: string) => {
-    deleteChild(id);
+    // deleteChild(id); // فعل دي لو عندك deleteChild
   };
 
   return (
@@ -32,60 +60,22 @@ const Profile = () => {
           {/* Left Column - User Profile */}
           <div className="lg:col-span-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-              {/* User Avatar */}
+              {/* Avatar */}
               <div className="flex items-center justify-center mb-6">
                 <div className="w-24 h-24 bg-violet-100 dark:bg-violet-900 rounded-full flex items-center justify-center">
                   <span className="text-3xl font-semibold text-violet-600 dark:text-violet-400">
-                    {user?.full_name ? user.full_name.charAt(0) : '?'}
+                    {username?.charAt(0).toUpperCase() || '?'}
                   </span>
                 </div>
               </div>
 
-              {/* User Details */}
+              {/* Info */}
               <div className="space-y-4">
-                {/* Name */}
-                <div className="flex items-center space-x-3 p-3 bg-violet-50 dark:bg-gray-700 rounded-lg">
-                  <User className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Name</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {user?.full_name || 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="flex items-center space-x-3 p-3 bg-violet-50 dark:bg-gray-700 rounded-lg">
-                  <Mail className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {user?.email || 'Not Provided'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Member Since */}
-                <div className="flex items-center space-x-3 p-3 bg-violet-50 dark:bg-gray-700 rounded-lg">
-                  <Calendar className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Member Since</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center space-x-3 p-3 bg-violet-50 dark:bg-gray-700 rounded-lg">
-                  <Baby className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {user?.user_type === 'pregnant' ? 'Expecting Mother' : 'Parent'}
-                    </p>
-                  </div>
-                </div>
+                <InfoRow icon={<User />} label="Name" value={username} />
+                <InfoRow icon={<Mail />} label="Email" value={email} />
+                <InfoRow icon={<Calendar />} label="Member Since" value={joinDate} />
+                <InfoRow icon={<Baby />} label="Status" value="Parent" />
+                the status needs to be adjusted to be variable
               </div>
             </div>
           </div>
@@ -105,7 +95,10 @@ const Profile = () => {
                 </button>
               </div>
 
-              {children.length === 0 ? (
+              Chailed info is not activated
+
+              {/* لو عندك بيانات أطفال فعل ده */}
+              {/* {children.length === 0 ? (
                 <div className="text-center py-8">
                   <Baby className="w-12 h-12 text-violet-300 dark:text-violet-700 mx-auto mb-3" />
                   <p className="text-gray-500 dark:text-gray-400">No children added yet</p>
@@ -127,19 +120,17 @@ const Profile = () => {
                     />
                   ))}
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Add Child Modal */}
       <AddChildModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
 
-      {/* Edit Child Modal */}
       <EditChildModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -150,5 +141,16 @@ const Profile = () => {
     </div>
   );
 };
+
+// مكون صغير لإعادة استخدام عرض المعلومة
+const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | null }) => (
+  <div className="flex items-center space-x-3 p-3 bg-violet-50 dark:bg-gray-700 rounded-lg">
+    <div className="w-5 h-5 text-violet-600 dark:text-violet-400">{icon}</div>
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="font-medium text-gray-900 dark:text-gray-100">{value || 'N/A'}</p>
+    </div>
+  </div>
+);
 
 export default Profile;

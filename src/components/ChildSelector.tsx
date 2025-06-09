@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronDown, User, Plus } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
-import { Child } from '../lib/supabase';
+
+interface Child {
+  id: string;
+  name: string;
+}
 
 interface ChildSelectorProps {
   showAddButton?: boolean;
@@ -12,12 +15,22 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
   showAddButton = false,
   onAddClick
 }) => {
-  const { children, currentChild, setCurrentChild } = useUser();
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Read children from localStorage
+  const children: Child[] = JSON.parse(localStorage.getItem('children') || '[]');
+  
+  // Read current child ID from localStorage
+  const currentChildId = localStorage.getItem('currentChildId');
+  
+  // Find current child object
+  const currentChild = children.find(child => child.id === currentChildId) || null;
 
-  // if (children.length === 0) {                             //////////////////////////////////////////////////////////////
-  //   return null;                                       //////////////////////////////////////////////////////////////
-  // }                                               //////////////////////////////////////////////////////////////
+  const handleSelectChild = (child: Child) => {
+    // Update current child in localStorage
+    localStorage.setItem('currentChildId', child.id);
+    setIsOpen(false);
+  };
 
   return (
     <div className="relative">
@@ -40,10 +53,7 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
             {children.map((child) => (
               <button
                 key={child.id}
-                onClick={() => {
-                  setCurrentChild(child);
-                  setIsOpen(false);
-                }}
+                onClick={() => handleSelectChild(child)}
                 className={`block w-full text-left px-4 py-2 text-sm hover:bg-violet-50 dark:hover:bg-gray-700 ${
                   currentChild?.id === child.id 
                     ? 'bg-violet-50 dark:bg-gray-700 text-violet-700 dark:text-violet-300' 
@@ -58,7 +68,7 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  if (onAddClick) onAddClick();
+                  onAddClick?.();
                 }}
                 className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 mt-1"
               >
