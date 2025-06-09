@@ -56,16 +56,19 @@ const Login = () => {
       const response = await auth.login(loginData);
       if (response.token) {
 
-        window.location.href = '/home'; //navigate('/home'); // Navigate to home on successful login  
+        window.location.href = '/home';  // Navigate to home on successful login  
 
           // After successful login
-        localStorage.setItem('userData', JSON.stringify({
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('userData', JSON.stringify({ 
           id: response.user.id,
           username: response.user.name,
           email: response.user.email,
           dateOfBirth: response.user.birthday,
           bloodType: response.user.blood_type,
-          joinDate: response.user.join_date
+          joinDate: response.user.join_date,
+          darkMode: response.user.dark_mode,
+          fontSize: response.user.font_size
           }));
       }
     } catch (error: any) {

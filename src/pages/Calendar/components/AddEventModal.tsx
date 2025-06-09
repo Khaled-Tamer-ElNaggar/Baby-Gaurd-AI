@@ -1,31 +1,44 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { format } from 'date-fns';
+import axios from 'axios';
 
 const AddEventModal = ({ isOpen, onClose, onAdd, selectedDate }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [time, setTime] = useState('12:00');
+  const [eventType, setEventType] = useState('appointment'); // Example: Add event type
+  const [error, setError] = useState(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const [hours, minutes] = time.split(':');
-    const eventDate = new Date(selectedDate);
-    eventDate.setHours(parseInt(hours), parseInt(minutes));
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError(null);
 
-    onAdd({
-      title,
-      description,
-      date: eventDate.toISOString(),
-    });
+  const [hours, minutes] = time.split(':');
+  const eventDate = new Date(selectedDate);
+  eventDate.setHours(parseInt(hours), parseInt(minutes));
 
+  const eventData = {
+    title,
+    description,
+    date: eventDate.toISOString(),
+    event_type: eventType, // Added in previous update
+  };
+
+  try {
+    await onAdd(eventData); // Call addEvent from useCalendar
     setTitle('');
     setDescription('');
     setTime('12:00');
+    setEventType('appointment');
     onClose();
-  };
+  } catch (err) {
+    setError(err.message || 'Failed to create event');
+    console.error('Error creating event:', err);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -40,6 +53,12 @@ const AddEventModal = ({ isOpen, onClose, onAdd, selectedDate }) => {
           </button>
         </div>
 
+        {error && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -51,6 +70,22 @@ const AddEventModal = ({ isOpen, onClose, onAdd, selectedDate }) => {
               disabled
               className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Event Type
+            </label>
+            <select
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value)}
+              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+              required
+            >
+              <option value="appointment">Appointment</option>
+              <option value="reminder">Reminder</option>
+              <option value="task">Task</option>
+            </select>
           </div>
 
           <div>
@@ -102,4 +137,5 @@ const AddEventModal = ({ isOpen, onClose, onAdd, selectedDate }) => {
     </div>
   );
 };
+
 export default AddEventModal;

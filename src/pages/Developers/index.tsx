@@ -11,7 +11,7 @@ const Developers = () => {
       id: 1,
       name: "Belal Gamal",
       role: "Frontend Developer",
-      image: "/src/Assets/imgs/Belal.jpg",
+      image: "/src/Assets/imgs/belal.jpeg",
       linkedin: "https://www.linkedin.com/in/belal-gamal-474/",
       github: "https://github.com/Belal12BG",
       email: "belalgamal474@gmail.com",

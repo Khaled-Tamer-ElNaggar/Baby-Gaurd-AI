@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import HealthOverview from '../components/HealthOverview';
 import Appointments from '../components/Appointments';
@@ -15,7 +15,19 @@ const Home = () => {
     return null;
   }
 
-  const username = JSON.parse(localStorage.getItem('userData')).username;
+  const [username, setUsername] = useState<string | null>(null);
+  useEffect(() => {
+      const userDataString = localStorage.getItem('userData');
+      if (userDataString) {
+        try {
+          const userData = JSON.parse(userDataString);
+          setUsername(userData?.username || 'Unknown');
+        } catch (error) {
+          console.error('Failed to parse userData from localStorage', error);
+        }
+      }
+    }, []);
+
 
   return (
     <div className="min-h-screen bg-violet-50 dark:bg-gray-900">

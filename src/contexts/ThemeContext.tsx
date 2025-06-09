@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+const darkMode = localStorage.getItem('darkMode');
+const fontSize = localStorage.getItem('fontSize');
+
 type Theme = 'light' | 'dark';
 type FontSize = 'small' | 'normal' | 'large';
 

@@ -6,6 +6,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useUser } from '../../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
 
+const darkMode = localStorage.getItem('darkMode');
+const fontSize = localStorage.getItem('fontSize');
+
 const Settings = () => {
   const { theme, fontSize, toggleTheme, setFontSize } = useTheme();
   const { signOut } = useUser();
