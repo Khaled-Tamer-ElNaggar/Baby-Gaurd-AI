@@ -7,7 +7,7 @@ const AddEventModal = ({ isOpen, onClose, onAdd, selectedDate }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [time, setTime] = useState('12:00');
-  const [eventType, setEventType] = useState('appointment'); // Example: Add event type
+  const [eventType, setEventType] = useState('appointment'); // Example: Add event type///////////////////////////////////
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;

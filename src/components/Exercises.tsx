@@ -8,25 +8,25 @@ const Exercises = () => {
 
   const exercises = [
     {
-      image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=500&h=300&fit=crop",
+      image: "https://www.nourishmovelove.com/wp-content/uploads/2022/09/side-body-stretches-yoga-poses-for-pregnancy-scaled.jpg",
       title: "Prenatal Yoga",
       duration: "20 mins",
       level: "Beginner"
     },
     {
-      image: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=500&h=300&fit=crop",
+      image: "https://images.pexels.com/photos/3875222/pexels-photo-3875222.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
       title: "Gentle Stretching",
       duration: "15 mins",
       level: "Beginner"
     },
     {
-      image: "https://images.unsplash.com/photo-1518459031867-a89b944bffe4?w=500&h=300&fit=crop",
+      image: "https://images.pexels.com/photos/7990613/pexels-photo-7990613.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
       title: "Walking",
       duration: "30 mins",
       level: "All Levels"
     },
     {
-      image: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&h=300&fit=crop",
+      image: "https://images.pexels.com/photos/5889957/pexels-photo-5889957.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
       title: "Swimming",
       duration: "25 mins",
       level: "Intermediate"

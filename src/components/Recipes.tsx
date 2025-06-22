@@ -8,25 +8,25 @@ const Recipes = () => {
 
   const recipes = [
     {
-      image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=500&h=300&fit=crop",
+      image: "https://images.unsplash.com/photo-1495214783159-3503fd1b572d?w=800&h=600&fit=crop",
       title: "Healthy Breakfast Bowl",
       time: "15 mins",
       nutrition: "High in fiber & protein"
     },
     {
-      image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&h=300&fit=crop",
+      image: "https://images.pexels.com/photos/5421510/pexels-photo-5421510.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
       title: "Nutrient-Rich Salad",
       time: "20 mins",
       nutrition: "Rich in iron & vitamins"
     },
     {
-      image: "https://images.unsplash.com/photo-1547592180-85f173990554?w=500&h=300&fit=crop",
+      image: "https://images.unsplash.com/photo-1547592180-85f173990554?w=800&h=600&fit=crop",
       title: "Quinoa Power Bowl",
       time: "25 mins",
       nutrition: "High in protein"
     },
     {
-      image: "https://images.unsplash.com/photo-1543352634-99a5d50ae78e?w=500&h=300&fit=crop",
+      image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=800&h=600&fit=crop",
       title: "Omega-3 Rich Salmon",
       time: "30 mins",
       nutrition: "Rich in healthy fats"

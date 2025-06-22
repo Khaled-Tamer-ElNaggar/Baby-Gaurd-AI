@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Linkedin, Github, Mail } from 'lucide-react';
 import Header from '../../components/Header';
 import Navbar from '../../components/Navbar';
-
+///////////
 const Developers = () => {
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -121,11 +121,11 @@ const Developers = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-violet-600 dark:text-violet-400 mb-2">5+</div>
+              <div className="text-3xl font-bold text-violet-600 dark:text-violet-400 mb-2">4+</div>
               <div className="text-gray-600 dark:text-gray-300">Years Combined Experience</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-violet-600 dark:text-violet-400 mb-2">1000+</div>
+              <div className="text-3xl font-bold text-violet-600 dark:text-violet-400 mb-2">500+</div>
               <div className="text-gray-600 dark:text-gray-300">Hours of Development</div>
             </div>
             <div className="text-center">

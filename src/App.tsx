@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { UserProvider } from './contexts/UserContext';
 import { DataProvider } from './contexts/DataContext';
 import { useUser } from './contexts/UserContext';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import Intro from './pages/Intro';
 import Register from './pages/Auth/Register';
 import Login from './pages/Auth/Login';
@@ -58,27 +59,32 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<PublicRoute><Intro /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+    <>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<PublicRoute><Intro /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
-      {/* Protected Routes */}
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-      <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-      <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-      <Route path="/health" element={<ProtectedRoute><Health /></ProtectedRoute>} />
-      <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
-      <Route path="/wellness" element={<ProtectedRoute><Wellness /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-      <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
-      <Route path="/developers" element={<ProtectedRoute><Developers /></ProtectedRoute>} />
+        {/* Protected Routes */}
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/health" element={<ProtectedRoute><Health /></ProtectedRoute>} />
+        <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
+        <Route path="/wellness" element={<ProtectedRoute><Wellness /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+        <Route path="/developers" element={<ProtectedRoute><Developers /></ProtectedRoute>} />
 
-      {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
+    </>
   );
 };
 
