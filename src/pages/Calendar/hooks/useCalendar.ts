@@ -1,3 +1,4 @@
+// useCalendar.ts
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useData } from '../../../contexts/DataContext';
@@ -7,9 +8,16 @@ export const useCalendar = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState([]);
-  const { addAppointment, deleteAppointment } = useData(); // Keep for compatibility, if needed
+  const { addAppointment, deleteAppointment } = useData();
 
-  // Fetch events from backend
+  // Helper function to convert seconds to HH:mm:ss
+  const secondsToTimeString = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
   const fetchEvents = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -18,22 +26,25 @@ export const useCalendar = () => {
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/calendar-events', {
+      const response = await axios.get('http://localhost:5000/api/get-calendar-events', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      // Ensure events are formatted consistently
-      const formattedEvents = response.data.events.map((event) => ({
-        id: event.id.toString(), // Convert to string for consistency with frontend
-        title: event.title,
-        description: event.description || '',
-        date: new Date(`${event.event_date}T${event.event_time}`).toISOString(),
-        event_type: event.event_type,
-        reminder_offset: event.reminder_offset,
-        is_recurring: event.is_recurring,
-      }));
+      const formattedEvents = response.data.calendar_events.map((event) => {
+        // Convert event_time from seconds to HH:mm:ss
+        const timeString = secondsToTimeString(event.event_time);
+        return {
+          id: event.id.toString(),
+          title: event.title,
+          description: event.description || '',
+          date: new Date(`${event.event_date}T${timeString}`).toISOString(),
+          event_type: event.event_type,
+          reminder_offset: event.reminder_offset,
+          is_recurring: event.is_recurring,
+        };
+      });
 
       setEvents(formattedEvents);
     } catch (err) {
@@ -41,7 +52,6 @@ export const useCalendar = () => {
     }
   };
 
-  // Load events on mount
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -55,7 +65,7 @@ export const useCalendar = () => {
 
       const eventDate = new Date(newEvent.date);
       const eventData = {
-        event_type: newEvent.event_type || 'appointment', // Default to 'appointment' if not provided
+        event_type: newEvent.event_type || 'appointment',
         event_date: format(eventDate, 'yyyy-MM-dd'),
         event_time: format(eventDate, 'HH:mm'),
         title: newEvent.title,
@@ -71,48 +81,44 @@ export const useCalendar = () => {
       });
 
       const createdEvent = {
-        id: response.data.id?.toString() || Date.now().toString(), // Use backend ID if available
+        id: response.data.id?.toString() || Date.now().toString(),
         ...newEvent,
       };
 
-      // Update local state
       setEvents((prevEvents) => [...prevEvents, createdEvent]);
-
-      // Optionally, update DataContext (if still needed)
       addAppointment(createdEvent);
     } catch (err) {
       console.error('Error adding event:', err.response?.data?.error || err.message);
-      throw err; // Let the caller (e.g., AddEventModal) handle the error
+      throw err;
     }
   };
 
-  const deleteEvent = async (eventId) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      await axios.delete(`http://localhost:5000/api/calendar-events/${eventId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      // Update local state
-      setEvents((prevEvents) => prevEvents.filter((event) => event.id !== eventId));
-
-      // Optionally, update DataContext (if still needed)
-      deleteAppointment(eventId);
-    } catch (err) {
-      console.error('Error deleting event:', err.response?.data?.error || err.message);
-      throw err; // Let the caller handle the error
+  const deleteEvent = async (eventId: string) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found');
     }
-  };
+
+    await axios.delete(`http://localhost:5000/api/calendar-events/${eventId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== eventId));
+    deleteAppointment(eventId);
+    console.log(`Event ${eventId} deleted successfully`);
+  } catch (err) {
+    const errorMessage = err.response?.data?.error || err.message;
+    console.error('Error deleting event:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
 
   return {
     selectedDate,
-    events, // Use local state instead of appointments from DataContext
+    events,
     isModalOpen,
     setSelectedDate,
     setIsModalOpen,
