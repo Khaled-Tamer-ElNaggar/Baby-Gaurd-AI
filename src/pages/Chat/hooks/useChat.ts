@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Message = {
   id: string;
@@ -13,30 +13,95 @@ type Conversation = {
   title: string;
   lastMessage: string;
   timestamp: string;
+  summary?: string;
 };
 
-export const useChat = () => {
-  const [currentConversationId, setCurrentConversationId] = useState('1');
-  const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: '1',
-      title: 'Pregnancy Health Tips',
-      lastMessage: "Hello! I'm your pregnancy assistant. How can I help you today?",
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+const API_BASE_URL = 'http://localhost:5000/api';
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: "Hello! I'm your pregnancy assistant. How can I help you today?",
-      isAi: true,
-      timestamp: new Date().toLocaleTimeString(),
-      conversationId: '1',
-    },
-  ]);
+const getToken = () => localStorage.getItem('token') || '';
 
-  const sendMessage = (text: string) => {
+const useChat = () => {
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat-sessions`, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setConversations(
+          data.sessions.map((sess: any) => ({
+            id: sess.session_uuid,
+            title: sess.session_topic,
+            lastMessage: sess.summary || 'No messages yet',
+            timestamp: sess.start_time,
+            summary: sess.summary,
+          }))
+        );
+        if (data.sessions.length > 0 && !currentConversationId) {
+          setCurrentConversationId(data.sessions[0].session_uuid);
+        }
+      } else {
+        console.error('Failed to fetch conversations:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    }
+  };
+
+  const fetchMessages = async (sessionId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/chat-sessions/${sessionId}/messages?page=1&per_page=50`,
+        {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setMessages(
+          data.messages.map((msg: any) => ({
+            id: msg.id.toString(),
+            text: msg.content,
+            isAi: msg.sender === 'assistant',
+            timestamp: new Date(msg.created_at).toLocaleTimeString(),
+            conversationId: sessionId,
+          }))
+        );
+      } else {
+        console.error('Failed to fetch messages:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    if (currentConversationId) {
+      fetchMessages(currentConversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [currentConversationId]);
+
+  const sendMessage = async (text: string) => {
+    if (!currentConversationId) return;
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text,
@@ -44,80 +109,147 @@ export const useChat = () => {
       timestamp: new Date().toLocaleTimeString(),
       conversationId: currentConversationId,
     };
+    setMessages((prev) => [...prev, userMessage]);
 
-    setMessages(prev => [...prev, userMessage]);
-    
-    setConversations(prev => 
-      prev.map(conv => 
-        conv.id === currentConversationId
-          ? { ...conv, lastMessage: text, timestamp: new Date().toISOString() }
-          : conv
-      )
-    );
-
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "I'm here to help you with any questions about your pregnancy journey.",
-        isAi: true,
-        timestamp: new Date().toLocaleTimeString(),
-        conversationId: currentConversationId,
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === currentConversationId
-            ? { ...conv, lastMessage: aiMessage.text, timestamp: new Date().toISOString() }
-            : conv
-        )
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/chat-sessions/${currentConversationId}/send`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: text }),
+        }
       );
-    }, 1000);
-  };
-
-  const deleteMessage = (messageId: string) => {
-    setMessages(prev => prev.filter(message => message.id !== messageId));
-  };
-
-  const deleteConversation = (conversationId: string) => {
-    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-    setMessages(prev => prev.filter(message => message.conversationId !== conversationId));
-    
-    if (currentConversationId === conversationId) {
-      const remainingConversations = conversations.filter(conv => conv.id !== conversationId);
-      if (remainingConversations.length > 0) {
-        setCurrentConversationId(remainingConversations[0].id);
+      const data = await response.json();
+      if (response.ok) {
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: data.response,
+          isAi: true,
+          timestamp: new Date().toLocaleTimeString(),
+          conversationId: currentConversationId,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === currentConversationId
+              ? { ...conv, lastMessage: data.response, timestamp: new Date().toISOString() }
+              : conv
+          )
+        );
       } else {
-        selectConversation('new');
+        console.error('Failed to send message:', data.error);
       }
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
 
-  const selectConversation = (id: string) => {
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/chat-sessions/${conversationId}/end`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+      if (response.ok) {
+        setConversations((prev) => prev.filter((conv) => conv.id !== conversationId));
+        setMessages((prev) => prev.filter((msg) => msg.conversationId !== conversationId));
+        if (currentConversationId === conversationId) {
+          const remainingConversations = conversations.filter(
+            (conv) => conv.id !== conversationId
+          );
+          if (remainingConversations.length > 0) {
+            setCurrentConversationId(remainingConversations[0].id);
+          } else {
+            selectConversation('new');
+          }
+        }
+      } else {
+        const data = await response.json();
+        console.error('Failed to delete conversation:', data.error);
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
+
+  const selectConversation = async (id: string) => {
     if (id === 'new') {
-      const newId = Date.now().toString();
-      const newConversation: Conversation = {
-        id: newId,
-        title: 'New Conversation',
-        lastMessage: 'Start a new conversation',
-        timestamp: new Date().toISOString(),
-      };
-      setConversations(prev => [newConversation, ...prev]);
-      setCurrentConversationId(newId);
-      setMessages([]);
+      try {
+        const response = await fetch(`${API_BASE_URL}/chat-sessions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = await response.json();
+        if (response.ok) {
+          const newConversation: Conversation = {
+            id: data.session_uuid,
+            title: 'New Chat',
+            lastMessage: 'Start a new conversation',
+            timestamp: new Date().toISOString(),
+          };
+          setConversations((prev) => [newConversation, ...prev]);
+          setCurrentConversationId(data.session_uuid);
+          setMessages([]);
+        } else {
+          console.error('Failed to create new conversation:', data.error);
+        }
+      } catch (error) {
+        console.error('Error creating new conversation:', error);
+      }
     } else {
       setCurrentConversationId(id);
     }
   };
 
+  const updateConversationTopic = async (conversationId: string, topic: string) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/chat-sessions/${conversationId}/update-topic`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ topic }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === conversationId ? { ...conv, title: topic } : conv
+          )
+        );
+      } else {
+        console.error('Failed to update topic:', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating topic:', error);
+    }
+  };
+
   return {
-    messages: messages.filter(m => m.conversationId === currentConversationId),
+    messages,
+    isLoading,
     conversations,
     currentConversationId,
     sendMessage,
-    deleteMessage,
     deleteConversation,
     selectConversation,
+    updateConversationTopic,
   };
 };
 
