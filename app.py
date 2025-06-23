@@ -43,11 +43,13 @@ def create_db_connection():
     return mysql.connector.connect(**db_config)
 
 # ── 4. JWT Auth ──────────────────────────────────────────────────────────
-def generate_token(user_id: int):
+def generate_token(user_id: int, name: str = '', email: str = ''):
     payload = {
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1),
         'iat': datetime.datetime.utcnow(),
-        'sub': str(user_id)
+        'sub': str(user_id),
+        'name': name,
+        'email': email,
     }
     return jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
 
@@ -94,7 +96,7 @@ def register():
             conn.commit()
             user_id = cur.lastrowid
 
-        token = generate_token(user_id)
+        token = generate_token(user_id, data['user_name'], data['user_email'])
         return jsonify(message='Registration successful', user_id=user_id, token=token), 201
 
     except Error:
@@ -119,7 +121,7 @@ def login():
         if not user or not check_password_hash(user['user_pass'], data['user_pass']):
             return jsonify(error='Invalid credentials'), 401
 
-        token = generate_token(user['id'])
+        token = generate_token(user['id'], user['user_name'], user['user_email'])
         return jsonify(
             message='Login successful',
             token=token,
@@ -366,6 +368,74 @@ def update_session_topic(current_user_id, session_uuid):
         app.logger.exception("[DB] Update topic failed")
         return jsonify(error='Failed to update topic'), 500
 
-# ── 8. Dev entrypoint ───────────────────────────────────────────────────
+# ── 8. Children Routes ───────────────────────────────────────────────────
+@app.route('/api/children', methods=['POST'])
+@token_required
+def add_child(current_user_id):
+    data = request.get_json() or {}
+    required = ['full_name', 'birth_date', 'gender']
+    if not all(k in data for k in required):
+        return jsonify(error='Missing required fields: full_name, birth_date, gender'), 400
+
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO children (
+                    user_id, full_name, birth_date, birth_weight, birth_height,
+                    gender, blood_type, genetic_conditions
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                current_user_id,
+                data['full_name'],
+                data['birth_date'],
+                data.get('birth_weight', None),
+                data.get('birth_height', None),
+                data['gender'],
+                data.get('blood_type', None),
+                data.get('genetic_conditions', None)
+            ))
+            conn.commit()
+            child_id = cur.lastrowid
+        return jsonify(message='Child added successfully', child_id=child_id), 201
+    except Error as e:
+        app.logger.exception("[DB] Add child failed")
+        return jsonify(error=f'Failed to add child: {str(e)}'), 500
+
+@app.route('/api/children', methods=['GET'])
+@token_required
+def get_children(current_user_id):
+    try:
+        with create_db_connection() as conn, conn.cursor(dictionary=True) as cur:
+            cur.execute("""
+                SELECT id, full_name, birth_date, birth_weight, birth_height,
+                       gender, blood_type, genetic_conditions
+                FROM children WHERE user_id = %s
+                ORDER BY birth_date DESC
+            """, (current_user_id,))
+            children = cur.fetchall()
+        return jsonify(children=children), 200
+    except Error:
+        app.logger.exception("[DB] Fetch children failed")
+        return jsonify(error='Failed to retrieve children'), 500
+
+@app.route('/api/children/<int:child_id>', methods=['DELETE'])
+@token_required
+def delete_child(current_user_id, child_id):
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT id FROM children WHERE id = %s AND user_id = %s
+            """, (child_id, current_user_id))
+            if not cur.fetchone():
+                return jsonify(error='Child not found or unauthorized'), 404
+            cur.execute("DELETE FROM children WHERE id = %s", (child_id,))
+            conn.commit()
+        return jsonify(message='Child deleted successfully'), 200
+    except Error:
+        app.logger.exception("[DB] Delete child failed")
+        return jsonify(error='Failed to delete child'), 500
+
+# ── 9. Dev entrypoint ───────────────────────────────────────────────────
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

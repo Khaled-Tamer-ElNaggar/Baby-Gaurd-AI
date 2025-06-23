@@ -7,40 +7,39 @@ import AddChildModal from './components/AddChildModal';
 import EditChildModal from './components/EditChildModal';
 import ChildCard from './components/ChildCard';
 
-// تعريف مؤقت للـ Child لو مش معرف
 interface Child {
   id: string;
-  name: string;
-  birthdate: string;
-  gender: string;
+  full_name: string;
+  birth_date: string;
+  birth_weight?: number;
+  birth_height?: number;
+  gender: 'male' | 'female' | 'other';
+  blood_type?: string;
+  genetic_conditions?: string;
 }
 
 const Profile = () => {
-  // لو عندك Context شغالة ممكن تفعل دول
-  // const { user, children, deleteChild } = useUser();
-
+  const { user, userChildren, deleteChild } = useUser();
   const [username, setUsername] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [joinDate, setJoinDate] = useState<string | null>(null);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
 
-  // لتفادي crash لو localStorage مفيهوش البيانات
   useEffect(() => {
     const userDataString = localStorage.getItem('userData');
     if (userDataString) {
       try {
         const userData = JSON.parse(userDataString);
-        setUsername(userData?.username || 'Unknown');
-        setEmail(userData?.email || 'Not Provided');
-        setJoinDate(userData?.joinDate || 'Unknown');
+        setUsername(userData?.name || user?.name || 'Unknown');
+        setEmail(userData?.email || user?.email || 'Not Provided');
+        setJoinDate(userData?.join_date || 'Unknown');
       } catch (error) {
         console.error('Failed to parse userData from localStorage', error);
       }
     }
-  }, []);
+  }, [user]);
 
   const handleEditChild = (child: Child) => {
     setSelectedChild(child);
@@ -48,7 +47,7 @@ const Profile = () => {
   };
 
   const handleDeleteChild = (id: string) => {
-    // deleteChild(id); // فعل دي لو عندك deleteChild
+    deleteChild(id);
   };
 
   return (
@@ -75,7 +74,6 @@ const Profile = () => {
                 <InfoRow icon={<Mail />} label="Email" value={email} />
                 <InfoRow icon={<Calendar />} label="Member Since" value={joinDate} />
                 <InfoRow icon={<Baby />} label="Status" value="Parent" />
-                the status needs to be adjusted to be variable
               </div>
             </div>
           </div>
@@ -95,10 +93,7 @@ const Profile = () => {
                 </button>
               </div>
 
-              Chailed info is not activated
-
-              {/* لو عندك بيانات أطفال فعل ده */}
-              {/* {children.length === 0 ? (
+              {userChildren.length === 0 ? (
                 <div className="text-center py-8">
                   <Baby className="w-12 h-12 text-violet-300 dark:text-violet-700 mx-auto mb-3" />
                   <p className="text-gray-500 dark:text-gray-400">No children added yet</p>
@@ -111,16 +106,16 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {children.map(child => (
+                  {userChildren.map(child => (
                     <ChildCard
                       key={child.id}
                       child={child}
                       onEdit={handleEditChild}
-                      onDelete={handleDeleteChild}
+                      onDelete={() => handleDeleteChild(child.id)}
                     />
                   ))}
                 </div>
-              )} */}
+              )}
             </div>
           </div>
         </div>
@@ -142,7 +137,6 @@ const Profile = () => {
   );
 };
 
-// مكون صغير لإعادة استخدام عرض المعلومة
 const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | null }) => (
   <div className="flex items-center space-x-3 p-3 bg-violet-50 dark:bg-gray-700 rounded-lg">
     <div className="w-5 h-5 text-violet-600 dark:text-violet-400">{icon}</div>

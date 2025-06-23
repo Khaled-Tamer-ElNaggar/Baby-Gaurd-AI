@@ -61,14 +61,7 @@ const Login = () => {
           // After successful login
         localStorage.setItem('token', response.token);
         localStorage.setItem('userData', JSON.stringify({ 
-          id: response.user.id,
-          username: response.user.name,
-          email: response.user.email,
-          dateOfBirth: response.user.birthday,
-          bloodType: response.user.blood_type,
-          joinDate: response.user.join_date,
-          darkMode: response.user.dark_mode,
-          fontSize: response.user.font_size
+          id: response.user.id
           }));
       }
     } catch (error: any) {
