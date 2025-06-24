@@ -293,6 +293,7 @@ def send_chat_message(current_user_id, session_uuid):
         app.logger.exception("[DB] Send message failed")
         return jsonify(error='Failed to send message'), 500
 
+# In app.py, modify the end_chat_session route
 @app.route('/api/chat-sessions/<session_uuid>/end', methods=['POST'])
 @token_required
 def end_chat_session(current_user_id, session_uuid):
@@ -300,11 +301,11 @@ def end_chat_session(current_user_id, session_uuid):
         with create_db_connection() as conn, conn.cursor(dictionary=True) as cur:
             cur.execute("""
                 SELECT session_topic FROM chat_sessions
-                WHERE user_id = %s AND session_uuid = %s AND end_time IS NULL
+                WHERE user_id = %s AND session_uuid = %s
             """, (current_user_id, session_uuid))
             sess = cur.fetchone()
             if not sess:
-                return jsonify(error='Session not found or already ended'), 404
+                return jsonify(error='Session not found'), 404
 
             cur.execute("""
                 SELECT sender, content FROM messages

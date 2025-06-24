@@ -148,6 +148,7 @@ const useChat = () => {
     }
   };
 
+  // In useChat.ts, modify deleteConversation
   const deleteConversation = async (conversationId: string) => {
     try {
       const response = await fetch(
@@ -159,6 +160,7 @@ const useChat = () => {
           },
         }
       );
+      const data = await response.json();
       if (response.ok) {
         setConversations((prev) => prev.filter((conv) => conv.id !== conversationId));
         setMessages((prev) => prev.filter((msg) => msg.conversationId !== conversationId));
@@ -173,11 +175,12 @@ const useChat = () => {
           }
         }
       } else {
-        const data = await response.json();
         console.error('Failed to delete conversation:', data.error);
+        alert(`Failed to delete conversation: ${data.error}`);
       }
     } catch (error) {
       console.error('Error deleting conversation:', error);
+      alert('An error occurred while deleting the conversation. Please try again.');
     }
   };
 
