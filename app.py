@@ -6,7 +6,6 @@ from mysql.connector import Error
 from functools import wraps
 import jwt
 import datetime, decimal, uuid, base64, logging
-
 from werkzeug.security import generate_password_hash, check_password_hash
 from chat import llm, process_query, naive_topic
 from langchain.schema import SystemMessage, HumanMessage
@@ -17,7 +16,7 @@ app.config['SECRET_KEY'] = 'your-secure-secret-key'
 app.config['ENV'] = 'development'
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
-# ── 2. Custom JSON provider ─────────────────────────────────────────────
+# ── 2. Custom JSON provider ──────────────────────────────────────────────
 class CustomJSON(DefaultJSONProvider):
     def default(self, obj):
         if isinstance(obj, decimal.Decimal): return float(obj)
@@ -42,7 +41,7 @@ db_config = dict(
 def create_db_connection():
     return mysql.connector.connect(**db_config)
 
-# ── 4. JWT Auth ──────────────────────────────────────────────────────────
+# ── 4. JWT Auth and Decorator Functions ────────────────────────────────────
 def generate_token(user_id: int, name: str = '', email: str = ''):
     payload = {
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1),
@@ -68,6 +67,27 @@ def token_required(f):
         except (jwt.InvalidTokenError, ValueError) as e:
             app.logger.info(f"Token decode failed: {e}")
             return jsonify(error='Invalid token!'), 401
+        return f(current_user_id, *args, **kwargs)
+    return decorated
+
+def ensure_today_record(f):
+    @wraps(f)
+    def decorated(current_user_id, *args, **kwargs):
+        today = datetime.date.today().isoformat()
+        try:
+            with create_db_connection() as conn, conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id FROM health_tracking
+                    WHERE user_id = %s AND track_date = %s
+                """, (current_user_id, today))
+                if not cur.fetchone():
+                    cur.execute("""
+                        INSERT INTO health_tracking (user_id, track_date, sleep_hours, water_intake, steps)
+                        VALUES (%s, %s, 0.0, 0.0, 0)
+                    """, (current_user_id, today))
+                    conn.commit()
+        except Error:
+            app.logger.exception("[DB] ensure_today_record failed")
         return f(current_user_id, *args, **kwargs)
     return decorated
 
@@ -234,6 +254,25 @@ def get_chat_sessions(current_user_id):
         app.logger.exception("[DB] Fetch chat sessions failed")
         return jsonify(error='Failed to retrieve chat sessions'), 500
 
+@app.route('/api/chat-sessions/<session_uuid>', methods=['DELETE'])
+@token_required
+def delete_chat_session(current_user_id, session_uuid):
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT id FROM chat_sessions
+                WHERE user_id = %s AND session_uuid = %s
+            """, (current_user_id, session_uuid))
+            if not cur.fetchone():
+                return jsonify(error='Session not found or unauthorized'), 404
+            cur.execute("DELETE FROM messages WHERE session_uuid = %s", (session_uuid,))
+            cur.execute("DELETE FROM chat_sessions WHERE session_uuid = %s", (session_uuid,))
+            conn.commit()
+        return jsonify(message='Chat session deleted successfully'), 200
+    except Error:
+        app.logger.exception("[DB] Delete chat session failed")
+        return jsonify(error='Failed to delete chat session'), 500
+
 @app.route('/api/chat-sessions/<session_uuid>/messages', methods=['GET'])
 @token_required
 def get_chat_messages(current_user_id, session_uuid):
@@ -293,7 +332,6 @@ def send_chat_message(current_user_id, session_uuid):
         app.logger.exception("[DB] Send message failed")
         return jsonify(error='Failed to send message'), 500
 
-# In app.py, modify the end_chat_session route
 @app.route('/api/chat-sessions/<session_uuid>/end', methods=['POST'])
 @token_required
 def end_chat_session(current_user_id, session_uuid):
@@ -437,6 +475,127 @@ def delete_child(current_user_id, child_id):
         app.logger.exception("[DB] Delete child failed")
         return jsonify(error='Failed to delete child'), 500
 
-# ── 9. Dev entrypoint ───────────────────────────────────────────────────
+# ── 9. Tracker Routes ────────────────────────────────────────────────────
+@app.route('/api/trackers/water', methods=['PATCH'])
+@token_required
+@ensure_today_record
+def update_water(current_user_id):
+    data = request.get_json() or {}
+    water = data.get('water_intake')
+    if water is None:
+        return jsonify(error="water_intake is required"), 400
+
+    today = datetime.date.today().isoformat()
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE health_tracking
+                SET water_intake = %s
+                WHERE user_id = %s AND track_date = %s
+            """, (water, current_user_id, today))
+            conn.commit()
+        return jsonify(message="Water intake updated"), 200
+    except Error:
+        app.logger.exception("[DB] Update water failed")
+        return jsonify(error="Failed to update water intake"), 500
+
+@app.route('/api/trackers/sleep', methods=['PATCH'])
+@token_required
+@ensure_today_record
+def update_sleep(current_user_id):
+    data = request.get_json() or {}
+    sleep = data.get('sleep_hours')
+    if sleep is None:
+        return jsonify(error="sleep_hours is required"), 400
+
+    today = datetime.date.today().isoformat()
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE health_tracking
+                SET sleep_hours = %s
+                WHERE user_id = %s AND track_date = %s
+            """, (sleep, current_user_id, today))
+            conn.commit()
+        return jsonify(message="Sleep hours updated"), 200
+    except Error:
+        app.logger.exception("[DB] Update sleep failed")
+        return jsonify(error="Failed to update sleep hours"), 500
+
+@app.route('/api/trackers/steps', methods=['PATCH'])
+@token_required
+@ensure_today_record
+def update_steps(current_user_id):
+    data = request.get_json() or {}
+    steps = data.get('steps')
+    if steps is None:
+        return jsonify(error="steps is required"), 400
+
+    today = datetime.date.today().isoformat()
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE health_tracking
+                SET steps = %s
+                WHERE user_id = %s AND track_date = %s
+            """, (steps, current_user_id, today))
+            conn.commit()
+        return jsonify(message="Steps updated"), 200
+    except Error:
+        app.logger.exception("[DB] Update steps failed")
+        return jsonify(error="Failed to update steps"), 500
+
+@app.route('/api/trackers/today', methods=['GET'])
+@token_required
+def get_today_tracker(current_user_id):
+    today = datetime.date.today().isoformat()
+    try:
+        with create_db_connection() as conn, conn.cursor(dictionary=True) as cur:
+            cur.execute("""
+                SELECT sleep_hours, water_intake, steps
+                FROM health_tracking
+                WHERE user_id = %s AND track_date = %s
+            """, (current_user_id, today))
+            row = cur.fetchone()
+            if not row:
+                return jsonify(sleep_hours=0.0, water_intake=0.0, steps=0), 200
+            return jsonify(row), 200
+    except Error:
+        app.logger.exception("[DB] Fetch today tracker failed")
+        return jsonify(error="Failed to fetch today's tracker"), 500
+
+@app.route('/api/trackers/all', methods=['PATCH'])
+@token_required
+@ensure_today_record
+def update_all_trackers(current_user_id):
+    data = request.get_json() or {}
+    water = data.get('water_intake', 0.0)
+    sleep = data.get('sleep_hours', 0.0)
+    steps = data.get('steps', 0)
+
+    today = datetime.date.today().isoformat()
+    try:
+        with create_db_connection() as conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE health_tracking
+                SET water_intake = %s, sleep_hours = %s, steps = %s
+                WHERE user_id = %s AND track_date = %s
+            """, (water, sleep, steps, current_user_id, today))
+            conn.commit()
+        return jsonify(message="All trackers updated"), 200
+    except Error:
+        app.logger.exception("[DB] Update all trackers failed")
+        return jsonify(error="Failed to update all trackers"), 500
+
+# ── 10. Child Record Routes ───────────────────────────────────────────────────
+# Not implemented yet
+
+# ── 11. Adult/Relative Routes ────────────────────────────────────────────
+# Not implemented yet
+
+# ── 12. Pages Routes ─────────────────────────────────────────────────────
+# Not implemented yet
+
+# ── 13. Dev entrypoint ───────────────────────────────────────────────────
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
