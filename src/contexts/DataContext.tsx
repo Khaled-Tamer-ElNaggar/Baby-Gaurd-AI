@@ -84,6 +84,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activities, setActivities] = useState<Activity[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [error, setError] = useState<string>('');
+
+  // Fetch memories from backend
+  useEffect(() => {
+    const fetchMemories = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to fetch memories');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:5000/api/user-media', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          const fetchedMemories: Memory[] = data.images.map((item: any) => ({
+            id: item.id.toString(),
+            child_id: currentChild?.id,
+            photo: item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`,
+            caption: item.description || '',
+            date: item.uploaded_at,
+            likes: 0,
+            comments: 0,
+          }));
+          setMemories(fetchedMemories);
+          setError('');
+        } else {
+          setError(data.error || 'Failed to fetch memories');
+        }
+      } catch (err) {
+        console.error('Error fetching memories:', err);
+        setError('Network error: Could not reach the server');
+      }
+    };
+
+    fetchMemories();
+  }, [currentChild]);
 
   // Filter data based on current child
   const filteredHealthMetrics = healthMetrics.filter(
@@ -200,7 +243,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteMemory = (id: string) => {
-    setMemories(prev => prev.filter(memory => memory.id !== id));
+    setMemories(prev => prev.filter((memory) => memory.id !== id));
   };
 
   const updateBabyMetrics = (metrics: { size?: string; weight?: string; height?: string }) => {
