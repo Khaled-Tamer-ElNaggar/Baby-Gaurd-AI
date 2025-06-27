@@ -152,9 +152,9 @@ const useChat = () => {
   const deleteConversation = async (conversationId: string) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/chat-sessions/${conversationId}/end`,
+        `${API_BASE_URL}/chat-sessions/${conversationId}`, // Updated endpoint
         {
-          method: 'POST',
+          method: 'DELETE',
           headers: {
             Authorization: `Bearer ${getToken()}`,
           },
