@@ -14,7 +14,7 @@ const AddMemoryModal: React.FC<AddMemoryModalProps> = ({ isOpen, onClose }) => {
   const [preview, setPreview] = useState<string>('');
   const [error, setError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addMemory, setMemories } = useData();
+  const { addMemory, memories, setMemories } = useData();
   const { currentChild } = useUser();
 
   if (!isOpen) return null;

@@ -57,6 +57,7 @@ interface DataContextType {
   activities: Activity[];
   appointments: Appointment[];
   memories: Memory[];
+  setMemories: React.Dispatch<React.SetStateAction<Memory[]>>;
   addHealthMetric: (metric: Omit<HealthMetric, 'id'>) => void;
   updateHealthMetric: (id: string, updates: Partial<HealthMetric>) => void;
   deleteHealthMetric: (id: string) => void;
@@ -102,25 +103,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Authorization': `Bearer ${token}`,
           },
         });
-
-        const data = await response.json();
-        if (response.ok) {
-          const fetchedMemories: Memory[] = data.images.map((item: any) => ({
-            id: item.id.toString(),
-            child_id: currentChild?.id,
-            photo: item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`,
-            caption: item.description || '',
-            date: item.uploaded_at,
-            likes: 0,
-            comments: 0,
-          }));
-          setMemories(fetchedMemories);
-          setError('');
-        } else {
-          setError(data.error || 'Failed to fetch memories');
+      
+        if (!response.ok) {
+          const data = await response.json();
+          console.error('Backend error:', data);
+          setError(data.error || `HTTP error: ${response.status}`);
+          return;
         }
-      } catch (err) {
-        console.error('Error fetching memories:', err);
+      
+        const data = await response.json();
+        const fetchedMemories: Memory[] = data.images.map((item: any) => ({
+          id: item.id.toString(),
+          child_id: currentChild?.id,
+          photo: item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`,
+          caption: item.description || '',
+          date: item.uploaded_at,
+          likes: 0,
+          comments: 0,
+        }));
+        setMemories(fetchedMemories);
+        setError('');} 
+      catch (err) {
+        console.error('Detailed fetch error:', {
+          error: err,
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        });
         setError('Network error: Could not reach the server');
       }
     };
@@ -242,8 +251,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ));
   };
 
-  const deleteMemory = (id: string) => {
-    setMemories(prev => prev.filter((memory) => memory.id !== id));
+  const deleteMemory = async (id: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to delete memories');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/user-media/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setMemories(prev => prev.filter(memory => memory.id !== id));
+        setError('');
+      } else {
+        setError(data.error || 'Failed to delete memory');
+      }
+    } catch (err) {
+      console.error('Error deleting memory:', err);
+      setError('Network error: Could not reach the server');
+    }
   };
 
   const updateBabyMetrics = (metrics: { size?: string; weight?: string; height?: string }) => {
@@ -285,6 +318,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activities: filteredActivities,
         appointments: filteredAppointments,
         memories: filteredMemories,
+        setMemories,
         addHealthMetric,
         updateHealthMetric,
         deleteHealthMetric,
