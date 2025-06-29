@@ -3,6 +3,15 @@ import { format } from 'date-fns';
 import { Heart, MessageCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import EditMemoryModal from './EditMemoryModal';
 
+const getImageUrl = (photo, image) => {
+  // Use photo or image, fallback to empty string
+  const path = photo || image || '';
+  // Extract filename (handles both / and \ as separators)
+  const parts = path.split(/[/\\]/);
+  const filename = parts[parts.length - 1];
+  return `/uploads/${filename}`;
+};
+
 const MemoryCard = ({ id, image, photo, caption, date, likes = 0, comments = 0, onDelete, onEdit }) => {
   const [showActions, setShowActions] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -11,7 +20,7 @@ const MemoryCard = ({ id, image, photo, caption, date, likes = 0, comments = 0, 
     <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
       <div className="relative aspect-square">
         <img
-          src={photo || image}
+          src={getImageUrl(photo, image)}
           alt={caption}
           className="w-full h-full object-cover"
         />
