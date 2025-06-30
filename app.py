@@ -112,7 +112,7 @@ def register():
         with create_db_connection() as conn, conn.cursor(dictionary=True) as cur:
             cur.execute("SELECT id FROM users WHERE user_email = %s", (data['user_email'],))
             if cur.fetchone():
-                return jsonify(error='Email already exists'), 409
+                return jsonify(error='Email already exists', code="email_exists"), 409
 
             hashed_pw = generate_password_hash(data['user_pass'])
             cur.execute("""
@@ -683,7 +683,7 @@ def delete_user_image(current_user_id, media_id):
         app.logger.exception("[DB] Delete user_media failed")
         return jsonify(error='Failed to delete image'), 500
     
-@app.route('/Uploads/<filename>')
+@app.route('/uploads/<filename>')
 def serve_image(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 

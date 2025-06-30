@@ -112,15 +112,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       
         const data = await response.json();
-        const fetchedMemories: Memory[] = data.images.map((item: any) => ({
-          id: item.id.toString(),
-          child_id: currentChild?.id,
-          photo: item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`,
-          caption: item.description || '',
-          date: item.uploaded_at,
-          likes: 0,
-          comments: 0,
-        }));
+        const fetchedMemories: Memory[] = data.images.map((item: any) => {
+          let photo = item.image_url;
+          // Always use forward slashes and ensure a single slash after host
+          if (!photo.startsWith('http')) {
+            photo = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}`.replace(/\/?$/, '') + '/' + photo.replace(/^[\\/]+/, '').replace(/\\/g, '/');
+          }
+          return {
+            id: item.id.toString(),
+            child_id: currentChild?.id,
+            photo,
+            caption: item.description || '',
+            date: item.uploaded_at,
+            likes: 0,
+            comments: 0,
+          };
+        });
         setMemories(fetchedMemories);
         setError('');} 
       catch (err) {
@@ -135,6 +142,83 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     fetchMemories();
+  }, [currentChild]);
+
+  // Fetch appointments from backend
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to fetch appointments');
+        setAppointments([]);
+        return;
+      }
+      try {
+        const response = await fetch('http://localhost:5000/api/get-calendar-events', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          setError(data.error || `HTTP error: ${response.status}`);
+          setAppointments([]);
+          return;
+        }
+        const data = await response.json();
+        console.log('Fetched calendar_events:', data.calendar_events); // DEBUG: See what backend returns
+        // Map backend events to Appointment type
+        const fetchedAppointments: Appointment[] = (data.calendar_events || []).map((item: any) => {
+          let rawTime = item.event_time || '';
+          let time = '00:00';
+          let displayTime = '';
+          if (/^\d+$/.test(rawTime)) {
+            // If rawTime is seconds (e.g., '43200')
+            const seconds = parseInt(rawTime, 10);
+            const date = new Date(); // today
+            date.setHours(0, 0, 0, 0);
+            date.setSeconds(seconds);
+            // Format as 'hh:mm AM/PM'
+            displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            time = displayTime;
+          } else if (/^\d{1,2}:\d{2}$/.test(rawTime)) {
+            // e.g. '15:30' => '03:30 PM'
+            const [h, m] = rawTime.split(':');
+            const date = new Date();
+            date.setHours(Number(h), Number(m), 0, 0);
+            displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            time = displayTime;
+          } else if (/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) {
+            // e.g. '15:30:00' => '03:30 PM'
+            const [h, m] = rawTime.split(':');
+            const date = new Date();
+            date.setHours(Number(h), Number(m), 0, 0);
+            displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            time = displayTime;
+          } else if (rawTime) {
+            // fallback: show the raw value for debugging
+            time = rawTime;
+          }
+          return {
+            id: item.id?.toString() ?? Math.random().toString(),
+            child_id: item.child_id ?? currentChild?.id,
+            title: item.title || item.event_type || '',
+            date: item.event_date || '',
+            time,
+            doctor: item.doctor || '',
+            location: item.location || '',
+            notes: item.description || '',
+          };
+        });
+        setAppointments(fetchedAppointments);
+        setError('');
+      } catch (err) {
+        setError('Network error: Could not reach the server');
+        setAppointments([]);
+      }
+    };
+    fetchAppointments();
   }, [currentChild]);
 
   // Filter data based on current child
@@ -230,8 +314,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ));
   };
 
-  const deleteAppointment = (id: string) => {
-    setAppointments(prev => prev.filter(appointment => appointment.id !== id));
+  const deleteAppointment = async (id: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to delete appointments');
+      return;
+    }
+    try {
+      const response = await fetch(`http://localhost:5000/api/calendar-events/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        setAppointments(prev => prev.filter(appointment => appointment.id !== id));
+        setError('');
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete appointment');
+      }
+    } catch (err) {
+      setError('Network error: Could not reach the server');
+    }
   };
 
   const addMemory = (memory: Omit<Memory, 'id' | 'likes' | 'comments'>) => {

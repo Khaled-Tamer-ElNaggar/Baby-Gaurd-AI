@@ -50,31 +50,40 @@ const Appointments = () => {
   );
 };
 
-const AppointmentCard = ({ appointment, onDelete }) => (
-  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
-    <div className="flex justify-between items-center mb-2">
-      <span className="font-medium text-violet-900 dark:text-violet-200">
-        {format(new Date(appointment.date), 'HH:mm')}
-      </span>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {format(new Date(appointment.date), 'dd/MM/yyyy')}
+const AppointmentCard = ({ appointment, onDelete }) => {
+  // Combine date and time for correct display
+  let dateTimeString = appointment.date;
+  if (appointment.time) {
+    // If time is already in HH:mm or HH:mm:ss, append to date
+    dateTimeString = `${appointment.date}T${appointment.time.length === 5 ? appointment.time : appointment.time + ':00'}`;
+  }
+  const dateObj = new Date(dateTimeString);
+  return (
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm">
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-medium text-violet-900 dark:text-violet-200">
+          {isNaN(dateObj.getTime()) ? appointment.time : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
-        <button
-          onClick={onDelete}
-          className="text-red-500 hover:text-red-600 dark:hover:text-red-400"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {isNaN(dateObj.getTime()) ? appointment.date : dateObj.toLocaleDateString('en-GB')}
+          </span>
+          <button
+            onClick={onDelete}
+            className="text-red-500 hover:text-red-600 dark:hover:text-red-400"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{appointment.title}</p>
+      {appointment.location && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          📍 {appointment.location}
+        </p>
+      )}
     </div>
-    <p className="text-sm text-gray-600 dark:text-gray-400">{appointment.title}</p>
-    {appointment.location && (
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        📍 {appointment.location}
-      </p>
-    )}
-  </div>
-);
+  );
+};
 
 export default Appointments;

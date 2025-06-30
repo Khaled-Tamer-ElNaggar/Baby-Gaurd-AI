@@ -3,16 +3,32 @@ import { format } from 'date-fns';
 import { Heart, MessageCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import EditMemoryModal from './EditMemoryModal';
 
-const getImageUrl = (photo, image) => {
-  // Use photo or image, fallback to empty string
-  const path = photo || image || '';
-  // Extract filename (handles both / and \ as separators)
-  const parts = path.split(/[/\\]/);
-  const filename = parts[parts.length - 1];
-  return `/uploads/${filename}`;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+type MemoryCardProps = {
+  id: number | string;
+  image?: string;
+  photo?: string;
+  caption: string;
+  date: string | Date;
+  likes?: number;
+  comments?: number;
+  onDelete: (id: number | string) => void;
+  onEdit: (id: number | string, newCaption: string) => void;
 };
 
-const MemoryCard = ({ id, image, photo, caption, date, likes = 0, comments = 0, onDelete, onEdit }) => {
+const getImageUrl = (photo?: string, image?: string): string => {
+  // Use photo or image, fallback to empty string
+  const path = photo || image || '';
+  // If already a full URL, return as is
+  if (path.startsWith('http')) return path;
+  // Extract filename (handles both / and \\ as separators)
+  const parts = path.split(/[/\\]/);
+  const filename = parts[parts.length - 1];
+  return `${BACKEND_URL.replace(/\/?$/, '')}/uploads/${filename}`;
+};
+
+const MemoryCard: React.FC<MemoryCardProps> = ({ id, image, photo, caption, date, likes = 0, comments = 0, onDelete, onEdit }) => {
   const [showActions, setShowActions] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
