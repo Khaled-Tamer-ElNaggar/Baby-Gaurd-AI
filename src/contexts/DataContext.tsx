@@ -221,42 +221,158 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchAppointments();
   }, [currentChild]);
 
-  // Filter data based on current child
-  const filteredHealthMetrics = healthMetrics.filter(
-    metric => !currentChild || metric.child_id === currentChild.id
-  );
-  
-  const filteredVaccinations = vaccinations.filter(
-    vaccination => !currentChild || vaccination.child_id === currentChild.id
-  );
-  
-  const filteredActivities = activities.filter(
-    activity => !currentChild || activity.child_id === currentChild.id
-  );
-  
-  const filteredAppointments = appointments.filter(
-    appointment => !currentChild || appointment.child_id === currentChild.id
-  );
-  
-  const filteredMemories = memories.filter(
-    memory => !currentChild || memory.child_id === currentChild.id
-  );
-
-  const addHealthMetric = (metric: Omit<HealthMetric, 'id'>) => {
-    const newMetric = { 
-      ...metric, 
-      id: Math.random().toString(),
-      child_id: currentChild?.id
+  // Fetch health metrics from backend
+  useEffect(() => {
+    const fetchHealthMetrics = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to fetch health metrics');
+        setHealthMetrics([]);
+        return;
+      }
+      try {
+        const response = await fetch('http://localhost:5000/api/trackers/today', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          setError(data.error || `HTTP error: ${response.status}`);
+          setHealthMetrics([]);
+          return;
+        }
+        const data = await response.json();
+        // Use backend keys: sleep_hours, water_intake
+        const metrics = [];
+        if (data.water_intake !== undefined) {
+          metrics.push({
+            id: 'water',
+            type: 'water',
+            value: data.water_intake,
+            unit: 'L',
+            date: new Date().toISOString(),
+          });
+        }
+        if (data.sleep_hours !== undefined) {
+          metrics.push({
+            id: 'sleep',
+            type: 'sleep',
+            value: data.sleep_hours,
+            unit: 'hours',
+            date: new Date().toISOString(),
+          });
+        }
+        if (data.steps !== undefined) {
+          metrics.push({
+            id: 'steps',
+            type: 'steps',
+            value: data.steps,
+            unit: 'steps',
+            date: new Date().toISOString(),
+          });
+        }
+        setHealthMetrics(metrics);
+        setError('');
+      } catch (err) {
+        setError('Network error: Could not reach the server');
+        setHealthMetrics([]);
+      }
     };
-    setHealthMetrics(prev => [newMetric, ...prev]);
+    fetchHealthMetrics();
+  }, [currentChild]);
+
+  // Filter data based on current child
+  // (for healthMetrics, just use the state directly for now)
+
+  // Helper to build HealthMetric
+  const buildMetric = (type: 'water' | 'sleep' | 'steps', value: number): HealthMetric => {
+    let unit = '';
+    if (type === 'water') unit = 'L';
+    if (type === 'sleep') unit = 'hours';
+    if (type === 'steps') unit = 'steps';
+    return {
+      id: type,
+      type,
+      value,
+      unit,
+      date: new Date().toISOString(),
+      child_id: currentChild?.id,
+    };
   };
 
-  const updateHealthMetric = (id: string, updates: Partial<HealthMetric>) => {
-    setHealthMetrics(prev => prev.map(metric => 
-      metric.id === id ? { ...metric, ...updates } : metric
-    ));
+  // Add or update health metric and sync with backend
+  const addHealthMetric = async (metric: Omit<HealthMetric, 'id'>) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to add health metrics');
+      return;
+    }
+    let endpoint = '';
+    let body: any = {};
+    if (metric.type === 'water') {
+      endpoint = '/api/trackers/water';
+      body = { water_intake: metric.value };
+    } else if (metric.type === 'sleep') {
+      endpoint = '/api/trackers/sleep';
+      body = { sleep_hours: metric.value };
+    } else if (metric.type === 'steps') {
+      endpoint = '/api/trackers/steps';
+      body = { steps: metric.value };
+    } else {
+      // fallback: just update local state
+      const newMetric = { ...metric, id: Math.random().toString(), child_id: currentChild?.id };
+      setHealthMetrics(prev => [newMetric, ...prev]);
+      return;
+    }
+    try {
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (response.ok) {
+        // Refetch metrics after update
+        const res = await fetch('http://localhost:5000/api/trackers/today', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const metrics: HealthMetric[] = [];
+          if (data.water !== undefined) metrics.push({ ...buildMetric('water', data.water) });
+          if (data.sleep !== undefined) metrics.push({ ...buildMetric('sleep', data.sleep) });
+          if (data.steps !== undefined) metrics.push({ ...buildMetric('steps', data.steps) });
+          setHealthMetrics(metrics);
+        }
+        setError('');
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to update health metric');
+      }
+    } catch (err) {
+      setError('Network error: Could not reach the server');
+    }
   };
 
+  // Update health metric (same as add, but signature matches context)
+  const updateHealthMetric = async (id: string, updates: Partial<HealthMetric>) => {
+    // Only allow updating value for water, sleep, steps
+    if (!['water', 'sleep', 'steps'].includes(id)) return;
+    await addHealthMetric({
+      type: id as 'water' | 'sleep' | 'steps',
+      value: updates.value ?? 0,
+      unit: '',
+      date: new Date().toISOString(),
+      child_id: currentChild?.id,
+    });
+  };
+
+  // Dummy deleteHealthMetric (not supported by backend, just remove locally)
   const deleteHealthMetric = (id: string) => {
     setHealthMetrics(prev => prev.filter(metric => metric.id !== id));
   };
@@ -418,11 +534,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <DataContext.Provider
       value={{
-        healthMetrics: filteredHealthMetrics,
-        vaccinations: filteredVaccinations,
-        activities: filteredActivities,
-        appointments: filteredAppointments,
-        memories: filteredMemories,
+        healthMetrics,
+        vaccinations,
+        activities,
+        appointments,
+        memories,
         setMemories,
         addHealthMetric,
         updateHealthMetric,
