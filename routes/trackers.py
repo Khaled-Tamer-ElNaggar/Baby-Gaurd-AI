@@ -162,8 +162,6 @@ def get_last7_sleep(current_user_id):
             for i in range(7):
                 d = (start_date + datetime.timedelta(days=i)).isoformat()
                 result.append({'date': d, 'hours': date_map.get(d, 0.0)})
-            
-            print("Sleep data:", result)
             return jsonify(result), 200
     except Error as e:
         print(f"Database error: {e}")
