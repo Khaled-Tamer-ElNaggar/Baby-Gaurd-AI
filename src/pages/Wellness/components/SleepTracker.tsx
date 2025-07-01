@@ -1,27 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, subDays } from 'date-fns';
-import { useData } from '../../../contexts/DataContext';
+import { format } from 'date-fns';
 
 const SleepTracker = () => {
-  const { healthMetrics } = useData();
+  const [sleepData, setSleepData] = useState<{ date: string; hours: number }[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get sleep metrics for the last 7 days
-  const sleepData = Array.from({ length: 7 }, (_, i) => {
-    const date = subDays(new Date(), 6 - i);
-    const metric = healthMetrics.find(m => 
-      m.type === 'sleep' && 
-      new Date(m.date).toDateString() === date.toDateString()
-    );
-
-    return {
-      date: date.toISOString(),
-      hours: metric?.value || 0
+  useEffect(() => {
+    const fetchSleepData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('http://localhost:5000/api/trackers/sleep/last7', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setSleepData(data);
+      } catch (e) {
+        setSleepData([]);
+      }
+      setLoading(false);
     };
-  });
+    fetchSleepData();
+  }, []);
 
-  const averageSleep = sleepData.reduce((acc, curr) => acc + curr.hours, 0) / sleepData.length;
-  const lastNightSleep = sleepData[sleepData.length - 1].hours;
+  const averageSleep = sleepData.length
+    ? sleepData.reduce((acc, curr) => acc + curr.hours, 0) / sleepData.length
+    : 0;
+  const lastNightSleep = sleepData.length ? sleepData[sleepData.length - 1].hours : 0;
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">

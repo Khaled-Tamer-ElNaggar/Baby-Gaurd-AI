@@ -129,3 +129,42 @@ def update_all_trackers(current_user_id):
         return jsonify(message="All trackers updated"), 200
     except Error:
         return jsonify(error="Failed to update all trackers"), 500
+
+from mysql.connector import Error  # Adjust import based on your database library
+
+@trackers_bp.route('/api/trackers/sleep/last7', methods=['GET'])
+@token_required
+def get_last7_sleep(current_user_id):
+    today = datetime.date.today()
+    start_date = today - datetime.timedelta(days=6)
+    try:
+        with create_db_connection() as conn, conn.cursor(dictionary=True) as cur:
+            # Log query parameters for debugging
+            print("Query params:", current_user_id, start_date.isoformat(), today.isoformat())
+            
+            # Execute the query
+            cur.execute("""
+                SELECT track_date, sleep_hours
+                FROM health_tracking
+                WHERE user_id = %s AND track_date BETWEEN %s AND %s
+                ORDER BY track_date ASC
+            """, (current_user_id, start_date.isoformat(), today.isoformat()))
+            rows = cur.fetchall()
+            
+            # Log raw database output
+            print("Raw database rows:", rows)
+            
+            # Convert track_date to ISO string for consistent lookup
+            date_map = {row['track_date'].isoformat(): float(row['sleep_hours']) for row in rows}
+            
+            # Build result for the last 7 days
+            result = []
+            for i in range(7):
+                d = (start_date + datetime.timedelta(days=i)).isoformat()
+                result.append({'date': d, 'hours': date_map.get(d, 0.0)})
+            
+            print("Sleep data:", result)
+            return jsonify(result), 200
+    except Error as e:
+        print(f"Database error: {e}")
+        return jsonify(error="Failed to fetch sleep data"), 500
