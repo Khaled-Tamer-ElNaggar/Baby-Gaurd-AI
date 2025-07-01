@@ -85,7 +85,9 @@ const AddMemoryModal: React.FC<AddMemoryModalProps> = ({ isOpen, onClose }) => {
           const fetchedMemories: Memory[] = fetchData.images.map((item: any) => ({
             id: item.id.toString(),
             child_id: item.child_id || currentChild?.id,
-            photo: item.image_url.startsWith('http') ? item.image_url : `http://localhost:5000${item.image_url}`,
+            photo: item.image_url.startsWith('http')
+              ? item.image_url
+              : 'http://localhost:5000/' + item.image_url.replace(/^[/\\]+/, '').replace(/\\/g, '/'),
             caption: item.description || '',
             date: item.uploaded_at,
             likes: 0,
