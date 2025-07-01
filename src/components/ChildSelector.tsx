@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, User, Plus } from 'lucide-react';
 
 interface Child {
@@ -16,53 +16,115 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
   onAddClick
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
-  // Read children from localStorage
-  const children: Child[] = JSON.parse(localStorage.getItem('children') || '[]');
-  
-  // Read current child ID from localStorage
-  const currentChildId = localStorage.getItem('currentChildId');
-  
-  // Find current child object
-  const currentChild = children.find(child => child.id === currentChildId) || null;
+  const [children, setChildren] = useState<Child[]>([]);
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSelectChild = (child: Child) => {
-    // Update current child in localStorage
-    localStorage.setItem('currentChildId', child.id);
+  // Fetch children from API
+  useEffect(() => {
+    const fetchChildren = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to view children');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await fetch('http://localhost:5000/api/children', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Fetched children data:', data); // Debug log
+        if (!data.children || !Array.isArray(data.children)) {
+          throw new Error('Invalid children data format');
+        }
+
+        setChildren(data.children);
+        // Set currentChildId to first child if none is set or if currentChildId is invalid
+        if (data.children.length > 0) {
+          const validChildId = data.children.find((child: Child) => child.id === data.currentChildId)
+            ? data.currentChildId
+            : data.children[0].id;
+          setCurrentChildId(validChildId);
+          localStorage.setItem('currentChildId', validChildId); // Sync with localStorage
+        } else {
+          setCurrentChildId(null);
+          localStorage.removeItem('currentChildId');
+        }
+      } catch (error) {
+        console.error('Error fetching children:', error);
+        setError('Failed to load children');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChildren();
+  }, []);
+
+  const handleSelectChild = async (child: Child) => {
+    console.log('Selected child:', child); // Debug log
+    setCurrentChildId(child.id);
     setIsOpen(false);
+    localStorage.setItem('currentChildId', child.id);
   };
+
+  const currentChild = children.find(child => child.id === currentChildId) || null;
+  console.log('Current child:', currentChild, 'Children:', children, 'CurrentChildId:', currentChildId); // Debug log
 
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 bg-violet-100 dark:bg-violet-900/30 rounded-full text-violet-800 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
+        disabled={isLoading || !!error}
+        className={`flex items-center gap-2 px-3 py-1.5 bg-violet-100 dark:bg-violet-900/30 rounded-full text-violet-800 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors ${
+          isLoading || error ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
         <User className="w-4 h-4" />
-        <span className="text-sm font-medium">{currentChild?.name || 'Select Child'}</span>
+        <span className="text-sm font-medium">
+          {error ? error : isLoading ? 'Loading...' : currentChild?.name || 'No Child Selected'}
+        </span>
         <ChevronDown className="w-4 h-4" />
       </button>
 
-      {isOpen && (
+      {isOpen && !isLoading && !error && (
         <>
           <div 
             className="fixed inset-0 z-10" 
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-1 z-20">
-            {children.map((child) => (
-              <button
-                key={child.id}
-                onClick={() => handleSelectChild(child)}
-                className={`block w-full text-left px-4 py-2 text-sm hover:bg-violet-50 dark:hover:bg-gray-700 ${
-                  currentChild?.id === child.id 
-                    ? 'bg-violet-50 dark:bg-gray-700 text-violet-700 dark:text-violet-300' 
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {child.name}
-              </button>
-            ))}
+            {children.length > 0 ? (
+              children.map((child) => (
+                <button
+                  key={child.id}
+                  onClick={() => handleSelectChild(child)}
+                  className={`block w-full text-left px-4 py-2 text-sm hover:bg-violet-50 dark:hover:bg-gray-700 ${
+                    currentChild?.id === child.id 
+                      ? 'bg-violet-50 dark:bg-gray-700 text-violet-700 dark:text-violet-300' 
+                      : 'text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {child.name || 'Unnamed Child'}
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-2 text-sm text-gray-500">
+                No children found
+              </div>
+            )}
             
             {showAddButton && (
               <button
