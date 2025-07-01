@@ -47,7 +47,7 @@ const ChildCard: React.FC<ChildCardProps> = ({ child, onEdit, onDelete }) => {
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-lg font-medium text-violet-900 dark:text-violet-200">
-            {child.name}
+            {child.full_name}
           </h3>
           <div className="mt-1 space-y-1">
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -125,7 +125,7 @@ const ChildCard: React.FC<ChildCardProps> = ({ child, onEdit, onDelete }) => {
               Confirm Deletion
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to delete {child.name}'s profile? This action cannot be undone.
+              Are you sure you want to delete {child.full_name}'s profile? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button

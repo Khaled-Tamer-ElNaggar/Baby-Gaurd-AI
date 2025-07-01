@@ -3,8 +3,6 @@ from flask_cors import CORS
 from utils.json_provider import CustomJSON
 import logging
 import os
-<<<<<<< Updated upstream
-=======
 
 # Import Blueprints
 from routes.auth import auth_bp
@@ -14,15 +12,7 @@ from routes.children import children_bp
 from routes.trackers import trackers_bp
 from routes.gallery import gallery_bp
 from routes.child_Selector import children_selector_bp
->>>>>>> Stashed changes
 
-# Import Blueprints
-from routes.auth import auth_bp
-from routes.calendar import calendar_bp
-from routes.chat import chat_bp
-from routes.children import children_bp
-from routes.trackers import trackers_bp
-from routes.gallery import gallery_bp
 
 # ── 1. App setup ─────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -41,10 +31,7 @@ app.register_blueprint(chat_bp)
 app.register_blueprint(children_bp)
 app.register_blueprint(trackers_bp)
 app.register_blueprint(gallery_bp)
-<<<<<<< Updated upstream
-=======
 app.register_blueprint(children_selector_bp)
->>>>>>> Stashed changes
 
 # ── 13. Dev entrypoint ───────────────────────────────────────────────────
 if __name__ == '__main__':

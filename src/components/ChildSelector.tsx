@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, User, Plus } from 'lucide-react';
 
+// Update the Child interface to match the children.py API response
 interface Child {
   id: string;
-  name: string;
+  full_name: string;
+  birth_date: string;
+  birth_weight?: number | null;
+  birth_height?: number | null;
+  gender?: string;
+  blood_type?: string | null;
+  genetic_conditions?: string | null;
 }
 
 interface ChildSelectorProps {
@@ -94,7 +101,7 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
       >
         <User className="w-4 h-4" />
         <span className="text-sm font-medium">
-          {error ? error : isLoading ? 'Loading...' : currentChild?.name || 'No Child Selected'}
+          {error ? error : isLoading ? 'Loading...' : currentChild?.full_name || 'No Child Selected'}
         </span>
         <ChevronDown className="w-4 h-4" />
       </button>
@@ -117,7 +124,7 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
                       : 'text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {child.name || 'Unnamed Child'}
+                  {child.full_name || 'Unnamed Child'}
                 </button>
               ))
             ) : (
@@ -132,7 +139,7 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
                   setIsOpen(false);
                   onAddClick?.();
                 }}
-                className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 mt-1"
+                className="flex items sparing gap-2 w-full text-left px-4 py-2 text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 mt-1"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Child</span>
