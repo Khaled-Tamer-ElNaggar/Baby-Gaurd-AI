@@ -1,4 +1,6 @@
+
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 
 type MessageProps = {
   id: string;
@@ -17,7 +19,13 @@ const ChatMessage = ({ id, isAi, message, timestamp }: MessageProps) => {
             : 'bg-violet-600 text-white'
         }`}
       >
-        <p className="text-sm">{message}</p>
+        {isAi ? (
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>{message}</ReactMarkdown>
+          </div>
+        ) : (
+          <p className="text-sm">{message}</p>
+        )}
         <span className={`text-xs mt-1 block ${isAi ? 'text-gray-500 dark:text-gray-400' : 'text-violet-200'}`}>
           {timestamp}
         </span>
