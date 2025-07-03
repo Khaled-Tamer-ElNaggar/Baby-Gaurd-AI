@@ -61,9 +61,9 @@ interface DataContextType {
   addHealthMetric: (metric: Omit<HealthMetric, 'id'>) => void;
   updateHealthMetric: (id: string, updates: Partial<HealthMetric>) => void;
   deleteHealthMetric: (id: string) => void;
-  addVaccination: (vaccination: Omit<Vaccination, 'id'>) => void;
+  addVaccination: (vaccination: Omit<Vaccination, 'id'>) => Promise<void>;
   updateVaccination: (id: string, updates: Partial<Vaccination>) => void;
-  deleteVaccination: (id: string) => void;
+  deleteVaccination: (id: string) => Promise<void>;
   addActivity: (activity: Omit<Activity, 'id'>) => void;
   updateActivity: (id: string, updates: Partial<Activity>) => void;
   deleteActivity: (id: string) => void;
@@ -87,6 +87,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [memories, setMemories] = useState<Memory[]>([]);
   const [error, setError] = useState<string>('');
 
+  // Fetch vaccinations from backend
+  useEffect(() => {
+    const fetchVaccinations = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to fetch vaccinations');
+        setVaccinations([]);
+        return;
+      }
+      try {
+        const response = await fetch('http://localhost:5000/api/vaccinations', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          setError(data.error || `HTTP error: ${response.status}`);
+          setVaccinations([]);
+          return;
+        }
+        const data = await response.json();
+        const fetchedVaccinations: Vaccination[] = (data.vaccinations || []).map((item: any) => ({
+          id: item.id.toString(),
+          child_id: item.child_id,
+          name: item.name,
+          date: item.date,
+          nextDue: item.nextDue,
+          notes: item.notes
+        }));
+        setVaccinations(fetchedVaccinations);
+        setError('');
+      } catch (err) {
+        console.error('Detailed fetch error:', {
+          error: err,
+          message: err instanceof Error ? err.message : 'Unknown error',
+          stack: err instanceof Error ? err.stack : undefined
+        });
+        setError('Network error: Could not reach the server');
+        setVaccinations([]);
+      }
+    };
+    fetchVaccinations();
+  }, [currentChild]);
+
   // Fetch memories from backend
   useEffect(() => {
     const fetchMemories = async () => {
@@ -95,7 +142,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError('Please log in to fetch memories');
         return;
       }
-
       try {
         const response = await fetch('http://localhost:5000/api/user-media', {
           method: 'GET',
@@ -103,18 +149,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Authorization': `Bearer ${token}`,
           },
         });
-      
         if (!response.ok) {
           const data = await response.json();
           console.error('Backend error:', data);
           setError(data.error || `HTTP error: ${response.status}`);
           return;
         }
-      
         const data = await response.json();
         const fetchedMemories: Memory[] = data.images.map((item: any) => {
           let photo = item.image_url;
-          // Always use forward slashes and ensure a single slash after host
           if (!photo.startsWith('http')) {
             photo = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}`.replace(/\/?$/, '') + '/' + photo.replace(/^[\\/]+/, '').replace(/\\/g, '/');
           }
@@ -129,18 +172,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         });
         setMemories(fetchedMemories);
-        setError('');} 
-      catch (err) {
+        setError('');
+      } catch (err) {
         console.error('Detailed fetch error:', {
           error: err,
-          message: err.message,
-          stack: err.stack,
-          name: err.name
+          message: err instanceof Error ? err.message : 'Unknown error',
+          stack: err instanceof Error ? err.stack : undefined
         });
         setError('Network error: Could not reach the server');
       }
     };
-
     fetchMemories();
   }, [currentChild]);
 
@@ -167,37 +208,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         const data = await response.json();
-        console.log('Fetched calendar_events:', data.calendar_events); // DEBUG: See what backend returns
-        // Map backend events to Appointment type
+        console.log('Fetched calendar_events:', data.calendar_events);
         const fetchedAppointments: Appointment[] = (data.calendar_events || []).map((item: any) => {
           let rawTime = item.event_time || '';
           let time = '00:00';
           let displayTime = '';
           if (/^\d+$/.test(rawTime)) {
-            // If rawTime is seconds (e.g., '43200')
             const seconds = parseInt(rawTime, 10);
-            const date = new Date(); // today
+            const date = new Date();
             date.setHours(0, 0, 0, 0);
             date.setSeconds(seconds);
-            // Format as 'hh:mm AM/PM'
             displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
             time = displayTime;
           } else if (/^\d{1,2}:\d{2}$/.test(rawTime)) {
-            // e.g. '15:30' => '03:30 PM'
             const [h, m] = rawTime.split(':');
             const date = new Date();
             date.setHours(Number(h), Number(m), 0, 0);
             displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
             time = displayTime;
           } else if (/^\d{1,2}:\d{2}:\d{2}$/.test(rawTime)) {
-            // e.g. '15:30:00' => '03:30 PM'
             const [h, m] = rawTime.split(':');
             const date = new Date();
             date.setHours(Number(h), Number(m), 0, 0);
             displayTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
             time = displayTime;
           } else if (rawTime) {
-            // fallback: show the raw value for debugging
             time = rawTime;
           }
           return {
@@ -244,8 +279,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         const data = await response.json();
-        // Use backend keys: sleep_hours, water_intake
-        const metrics = [];
+        const metrics: HealthMetric[] = [];
         if (data.water_intake !== undefined) {
           metrics.push({
             id: 'water',
@@ -283,9 +317,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchHealthMetrics();
   }, [currentChild]);
 
-  // Filter data based on current child
-  // (for healthMetrics, just use the state directly for now)
-
   // Helper to build HealthMetric
   const buildMetric = (type: 'water' | 'sleep' | 'steps', value: number): HealthMetric => {
     let unit = '';
@@ -321,7 +352,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       endpoint = '/api/trackers/steps';
       body = { steps: metric.value };
     } else {
-      // fallback: just update local state
       const newMetric = { ...metric, id: Math.random().toString(), child_id: currentChild?.id };
       setHealthMetrics(prev => [newMetric, ...prev]);
       return;
@@ -336,7 +366,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(body),
       });
       if (response.ok) {
-        // Refetch metrics after update
         const res = await fetch('http://localhost:5000/api/trackers/today', {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` },
@@ -361,7 +390,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Update health metric (same as add, but signature matches context)
   const updateHealthMetric = async (id: string, updates: Partial<HealthMetric>) => {
-    // Only allow updating value for water, sleep, steps
     if (!['water', 'sleep', 'steps'].includes(id)) return;
     await addHealthMetric({
       type: id as 'water' | 'sleep' | 'steps',
@@ -372,33 +400,86 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // Dummy deleteHealthMetric (not supported by backend, just remove locally)
+  // Delete health metric (local only, as backend doesn't support deletion)
   const deleteHealthMetric = (id: string) => {
     setHealthMetrics(prev => prev.filter(metric => metric.id !== id));
   };
 
-  const addVaccination = (vaccination: Omit<Vaccination, 'id'>) => {
-    const newVaccination = { 
-      ...vaccination, 
-      id: Math.random().toString(),
-      child_id: currentChild?.id
-    };
-    setVaccinations(prev => [newVaccination, ...prev]);
+  // Add vaccination and sync with backend
+  const addVaccination = async (vaccination: Omit<Vaccination, 'id'>) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to add vaccinations');
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:5000/api/vaccinations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: vaccination.name,
+          date: vaccination.date,
+          nextDue: vaccination.nextDue || null,
+          notes: vaccination.notes || null
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const newVaccination = {
+          ...vaccination,
+          id: data.vaccination_id.toString(),
+          child_id: currentChild?.id
+        };
+        setVaccinations(prev => [newVaccination, ...prev]);
+        setError('');
+      } else {
+        setError(data.error || 'Failed to add vaccination');
+      }
+    } catch (err) {
+      setError('Network error: Could not reach the server');
+    }
   };
 
+  // Update vaccination (local only, as backend update not implemented)
   const updateVaccination = (id: string, updates: Partial<Vaccination>) => {
-    setVaccinations(prev => prev.map(vaccination => 
+    setVaccinations(prev => prev.map(vaccination =>
       vaccination.id === id ? { ...vaccination, ...updates } : vaccination
     ));
   };
 
-  const deleteVaccination = (id: string) => {
-    setVaccinations(prev => prev.filter(vaccination => vaccination.id !== id));
+  // Delete vaccination and sync with backend
+  const deleteVaccination = async (id: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to delete vaccinations');
+      return;
+    }
+    try {
+      const response = await fetch(`http://localhost:5000/api/vaccinations/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setVaccinations(prev => prev.filter(vaccination => vaccination.id !== id));
+        setError('');
+      } else {
+        setError(data.error || 'Failed to delete vaccination');
+      }
+    } catch (err) {
+      setError('Network error: Could not reach the server');
+    }
   };
 
   const addActivity = (activity: Omit<Activity, 'id'>) => {
-    const newActivity = { 
-      ...activity, 
+    const newActivity = {
+      ...activity,
       id: Math.random().toString(),
       child_id: currentChild?.id
     };
@@ -406,7 +487,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateActivity = (id: string, updates: Partial<Activity>) => {
-    setActivities(prev => prev.map(activity => 
+    setActivities(prev => prev.map(activity =>
       activity.id === id ? { ...activity, ...updates } : activity
     ));
   };
@@ -416,8 +497,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addAppointment = (appointment: Omit<Appointment, 'id'>) => {
-    const newAppointment = { 
-      ...appointment, 
+    const newAppointment = {
+      ...appointment,
       id: Math.random().toString(),
       child_id: currentChild?.id
     };
@@ -425,7 +506,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateAppointment = (id: string, updates: Partial<Appointment>) => {
-    setAppointments(prev => prev.map(appointment => 
+    setAppointments(prev => prev.map(appointment =>
       appointment.id === id ? { ...appointment, ...updates } : appointment
     ));
   };
@@ -456,8 +537,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addMemory = (memory: Omit<Memory, 'id' | 'likes' | 'comments'>) => {
-    const newMemory = { 
-      ...memory, 
+    const newMemory = {
+      ...memory,
       id: Math.random().toString(),
       child_id: currentChild?.id,
       likes: 0,
@@ -467,7 +548,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateMemory = (id: string, updates: Partial<Memory>) => {
-    setMemories(prev => prev.map(memory => 
+    setMemories(prev => prev.map(memory =>
       memory.id === id ? { ...memory, ...updates } : memory
     ));
   };
@@ -478,7 +559,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError('Please log in to delete memories');
       return;
     }
-
     try {
       const response = await fetch(`http://localhost:5000/api/user-media/${id}`, {
         method: 'DELETE',
@@ -486,7 +566,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Authorization': `Bearer ${token}`,
         },
       });
-
       const data = await response.json();
       if (response.ok) {
         setMemories(prev => prev.filter(memory => memory.id !== id));
@@ -502,7 +581,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateBabyMetrics = (metrics: { size?: string; weight?: string; height?: string }) => {
     const now = new Date().toISOString();
-    
     if (metrics.weight) {
       addHealthMetric({
         type: 'weight',
@@ -511,7 +589,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         date: now
       });
     }
-    
     if (metrics.height) {
       addHealthMetric({
         type: 'height',
@@ -520,7 +597,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         date: now
       });
     }
-    
     if (metrics.size) {
       addHealthMetric({
         type: 'size',

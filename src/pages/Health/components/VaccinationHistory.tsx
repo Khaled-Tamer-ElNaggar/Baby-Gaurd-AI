@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Eye, X, Calendar, FileText } from 'lucide-react';
 import { useData } from '../../../contexts/DataContext';
 
 const VaccinationHistory = () => {
-  const { vaccinations, setVaccinations } = useData();
+  const { vaccinations, addVaccination, deleteVaccination } = useData();
   const [showModal, setShowModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [newVaccination, setNewVaccination] = useState({
@@ -15,42 +15,20 @@ const VaccinationHistory = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch vaccinations on component mount and when showHistory changes
-  useEffect(() => {
-    const fetchVaccinations = async () => {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('No authentication token found. Please log in.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:5000/api/vaccinations', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        const data = await response.json();
-        console.log('Fetched Vaccinations:', data); // Debug log
-        if (response.ok) {
-          setVaccinations(data.vaccinations || []);
-        } else {
-          setError(data.error || 'Failed to fetch vaccinations');
-        }
-      } catch (err) {
-        setError('An error occurred while fetching vaccinations');
-        console.error('Fetch Error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVaccinations();
-  }, [setVaccinations, showHistory]); // Re-fetch when showHistory changes
+  // Helper function to format dates
+  const formatDate = (dateStr: string): string => {
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) throw new Error('Invalid date');
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,32 +42,32 @@ const VaccinationHistory = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/vaccinations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: newVaccination.name,
-          date: newVaccination.date,
-          nextDue: newVaccination.nextDue,
-          notes: newVaccination.notes
-        })
+      await addVaccination({
+        name: newVaccination.name,
+        date: newVaccination.date,
+        nextDue: newVaccination.nextDue || undefined,
+        notes: newVaccination.notes || undefined
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        setVaccinations(prev => [...prev, { id: data.vaccination_id.toString(), ...newVaccination }]);
-        setNewVaccination({ name: '', date: '', nextDue: '', notes: '' });
-        setShowModal(false);
-      } else {
-        setError(data.error || 'Failed to add vaccination');
-        console.error('API Error:', data);
-      }
+      setNewVaccination({ name: '', date: '', nextDue: '', notes: '' });
+      setShowModal(false);
     } catch (err) {
-      setError('An error occurred while adding the vaccination');
-      console.error('Fetch Error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`An error occurred while adding the vaccination: ${errorMessage}`);
+      console.error('Add Vaccination Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (vaccinationId: string) => {
+    if (!confirm('Are you sure you want to delete this vaccination record?')) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await deleteVaccination(vaccinationId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`An error occurred while deleting the vaccination: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -101,12 +79,15 @@ const VaccinationHistory = () => {
       .sort((a, b) => new Date(a.nextDue!).getTime() - new Date(b.nextDue!).getTime())[0];
 
     if (future) {
-      const days = Math.ceil((new Date(future.nextDue!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      return `Next vaccination in ${days} days`;
+      const days = Math.ceil(
+        (new Date(future.nextDue!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return `${future.name} due in ${days} day${days === 1 ? '' : 's'} on ${formatDate(future.nextDue!)}`;
     }
     return 'No upcoming vaccinations';
   };
 
+  console.log('Vaccinations to render:', vaccinations);
   return (
     <>
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
@@ -258,12 +239,12 @@ const VaccinationHistory = () => {
                           </h4>
                           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{new Date(vaccination.date).toLocaleDateString()}</span>
+                            <span>{formatDate(vaccination.date)}</span>
                           </div>
                           {vaccination.nextDue && (
                             <div className="flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400 mt-1">
                               <Calendar className="w-4 h-4" />
-                              <span>Next: {new Date(vaccination.nextDue).toLocaleDateString()}</span>
+                              <span>Next: {formatDate(vaccination.nextDue)}</span>
                             </div>
                           )}
                           {vaccination.notes && (
@@ -274,11 +255,7 @@ const VaccinationHistory = () => {
                           )}
                         </div>
                         <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this vaccination record?')) {
-                              // Add delete API call here if needed
-                            }
-                          }}
+                          onClick={() => handleDelete(vaccination.id)}
                           className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                         >
                           <X className="w-5 h-5" />
