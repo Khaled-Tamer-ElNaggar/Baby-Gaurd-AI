@@ -15,6 +15,7 @@ from routes.child_Selector import children_selector_bp
 from routes.health_records import health_records_bp
 from routes.vaccinations import vaccinations_bp
 from routes.settings import settings_bp
+from routes.baby_growth import baby_growth_bp
 
 
 
@@ -39,6 +40,7 @@ app.register_blueprint(children_selector_bp)
 app.register_blueprint(health_records_bp)
 app.register_blueprint(vaccinations_bp)
 app.register_blueprint(settings_bp)
+app.register_blueprint(baby_growth_bp)
 
 # ── 13. Dev entrypoint ───────────────────────────────────────────────────
 if __name__ == '__main__':

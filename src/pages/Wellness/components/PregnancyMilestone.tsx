@@ -1,25 +1,95 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Baby, Weight, Ruler, Edit2, Check } from 'lucide-react';
 import { useData } from '../../../contexts/DataContext';
 
 const PregnancyMilestone = () => {
-  const { updateBabyMetrics } = useData();
+  const { updateBabyMetrics, fetchBabyMetrics } = useData();
   const [isEditing, setIsEditing] = useState(false);
   const [babyData, setBabyData] = useState({
-    size: '34',
-    weight: '1.5',
-    height: '25',
+    size: '',
+    weight: '',
+    height: '',
+    notes: '',
   });
   const [editData, setEditData] = useState({ ...babyData });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    setBabyData(editData);
-    updateBabyMetrics({
-      size: editData.size,
-      weight: editData.weight,
-      height: editData.height,
-    });
-    setIsEditing(false);
+  // Fetch the latest growth record on component mount
+  useEffect(() => {
+    const loadBabyMetrics = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/baby-growth', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const result = await response.json();
+        if (response.ok && result.growth_records && result.growth_records.length > 0) {
+          const latestRecord = result.growth_records[0];
+          setBabyData({
+            size: latestRecord.head_circumference || '',
+            weight: latestRecord.weight || '',
+            height: latestRecord.height || '',
+            notes: latestRecord.notes || '',
+          });
+          setEditData({
+            size: latestRecord.head_circumference || '',
+            weight: latestRecord.weight || '',
+            height: latestRecord.height || '',
+            notes: latestRecord.notes || '',
+          });
+        } else {
+          setBabyData({ size: '', weight: '', height: '', notes: '' });
+          setEditData({ size: '', weight: '', height: '', notes: '' });
+        }
+      } catch (err) {
+        setError('Failed to fetch baby growth data');
+        console.error('Error fetching baby metrics:', err);
+      }
+    };
+
+    loadBabyMetrics();
+  }, []);
+
+  // Handle save action to update or create a growth record
+  const handleSave = async () => {
+    try {
+      const payload = {
+        weight: parseFloat(editData.weight) || 0,
+        height: parseFloat(editData.height) || 0,
+        head_circumference: parseFloat(editData.size) || 0,
+        notes: editData.notes || null,
+      };
+
+      const response = await fetch('http://localhost:5000/api/baby-growth', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        setBabyData(editData);
+        updateBabyMetrics({
+          size: editData.size,
+          weight: editData.weight,
+          height: editData.height,
+          notes: editData.notes,
+        });
+        setIsEditing(false);
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to save baby growth data');
+      }
+    } catch (err) {
+      setError('Failed to save baby growth data');
+      console.error('Error saving baby metrics:', err);
+    }
   };
 
   return (
@@ -29,12 +99,17 @@ const PregnancyMilestone = () => {
           Baby Growth Tracking
         </h2>
         <button
-          onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+          onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
           className="p-2 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-gray-700 rounded-full"
         >
           {isEditing ? <Check className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
         </button>
       </div>
+      {error && (
+        <div className="mb-3 text-red-500 dark:text-red-400 text-sm">
+          {error}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-violet-50 dark:bg-gray-700 p-4 rounded-xl">
           <div className="flex items-center gap-2 mb-2">
@@ -49,11 +124,14 @@ const PregnancyMilestone = () => {
                 onChange={(e) => setEditData({ ...editData, size: e.target.value })}
                 className="w-full p-2 bg-white dark:bg-gray-600 border border-violet-200 dark:border-gray-500 rounded-lg text-sm"
                 step="0.1"
+                placeholder="Enter head size"
               />
               <span className="text-sm text-gray-500 dark:text-gray-400">cm</span>
             </div>
           ) : (
-            <p className="text-gray-600 dark:text-gray-300">{babyData.size} cm</p>
+            <p className="text-gray-600 dark:text-gray-300">
+              {babyData.size ? `${babyData.size} cm` : 'Not set'}
+            </p>
           )}
         </div>
         <div className="bg-violet-50 dark:bg-gray-700 p-4 rounded-xl">
@@ -69,11 +147,14 @@ const PregnancyMilestone = () => {
                 onChange={(e) => setEditData({ ...editData, weight: e.target.value })}
                 className="w-full p-2 bg-white dark:bg-gray-600 border border-violet-200 dark:border-gray-500 rounded-lg text-sm"
                 step="0.1"
+                placeholder="Enter weight"
               />
               <span className="text-sm text-gray-500 dark:text-gray-400">kg</span>
             </div>
           ) : (
-            <p className="text-gray-600 dark:text-gray-300">{babyData.weight} kg</p>
+            <p className="text-gray-600 dark:text-gray-300">
+              {babyData.weight ? `${babyData.weight} kg` : 'Not set'}
+            </p>
           )}
         </div>
         <div className="bg-violet-50 dark:bg-gray-700 p-4 rounded-xl">
@@ -89,13 +170,33 @@ const PregnancyMilestone = () => {
                 onChange={(e) => setEditData({ ...editData, height: e.target.value })}
                 className="w-full p-2 bg-white dark:bg-gray-600 border border-violet-200 dark:border-gray-500 rounded-lg text-sm"
                 step="0.1"
+                placeholder="Enter height"
               />
               <span className="text-sm text-gray-500 dark:text-gray-400">cm</span>
             </div>
           ) : (
-            <p className="text-gray-600 dark:text-gray-300">{babyData.height} cm</p>
+            <p className="text-gray-600 dark:text-gray-300">
+              {babyData.height ? `${babyData.height} cm` : 'Not set'}
+            </p>
           )}
         </div>
+      </div>
+      <div className="mt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-medium text-violet-900 dark:text-violet-200">Notes</span>
+        </div>
+        {isEditing ? (
+          <textarea
+            value={editData.notes}
+            onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+            className="w-full p-2 bg-white dark:bg-gray-600 border border-violet-200 dark:border-gray-500 rounded-lg text-sm"
+            placeholder="Add any notes about the growth record"
+          />
+        ) : (
+          <p className="text-gray-600 dark:text-gray-300">
+            {babyData.notes || 'No notes available'}
+          </p>
+        )}
       </div>
     </div>
   );
