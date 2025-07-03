@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, User, Plus } from 'lucide-react';
 
-// Update the Child interface to match the children.py API response
 interface Child {
   id: string;
   full_name: string;
@@ -24,14 +23,14 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
-  const [currentChildId, setCurrentChildId] = useState<string | null>(null);
+  const [currentChildId, setCurrentChildId] = useState<string | null>(null); // Initialize as null
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch children from API
   useEffect(() => {
     const fetchChildren = async () => {
       const token = localStorage.getItem('token');
+      console.log('Token:', token); // Debug log
       if (!token) {
         setError('Please log in to view children');
         setIsLoading(false);
@@ -48,47 +47,80 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
         });
         
         if (!response.ok) {
+          if (response.status === 401) {
+            setError('Unauthorized: Please log in again');
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentChildId'); // Clear on auth failure
+          }
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('Fetched children data:', data); // Debug log
+        console.log('Fetched children data:', data);
         if (!data.children || !Array.isArray(data.children)) {
           throw new Error('Invalid children data format');
         }
 
         setChildren(data.children);
-        // Set currentChildId to first child if none is set or if currentChildId is invalid
-        if (data.children.length > 0) {
-          const validChildId = data.children.find((child: Child) => child.id === data.currentChildId)
-            ? data.currentChildId
-            : data.children[0].id;
-          setCurrentChildId(validChildId);
-          localStorage.setItem('currentChildId', validChildId); // Sync with localStorage
+        setCurrentChildId(data.currentChildId || null); // Set from backend on mount
+        if (data.currentChildId) {
+          localStorage.setItem('currentChildId', data.currentChildId); // Sync localStorage
         } else {
-          setCurrentChildId(null);
           localStorage.removeItem('currentChildId');
         }
       } catch (error) {
         console.error('Error fetching children:', error);
-        setError('Failed to load children');
+        setError(error.message || 'Failed to load children');
+        setCurrentChildId(null); // Reset on error
+        localStorage.removeItem('currentChildId');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchChildren();
-  }, []);
+  }, []); // Empty dependency array ensures this runs only on mount
 
   const handleSelectChild = async (child: Child) => {
     console.log('Selected child:', child); // Debug log
-    setCurrentChildId(child.id);
-    setIsOpen(false);
-    localStorage.setItem('currentChildId', child.id);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('No token found, please log in');
+      setIsOpen(false);
+      return;
+    }
+  
+    try {
+      setIsLoading(true); // Show loading state during selection
+      const response = await fetch('http://localhost:5000/api/children/current', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ currentChildId: child.id })
+      });
+    
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+      }
+    
+      const data = await response.json();
+      setCurrentChildId(data.currentChildId); // Update only on user selection
+      localStorage.setItem('currentChildId', data.currentChildId); // Update localStorage
+      setIsOpen(false);
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      console.error('Error updating current child:', error);
+      setError(error.message || 'Failed to update current child');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const currentChild = children.find(child => child.id === currentChildId) || null;
-  console.log('Current child:', currentChild, 'Children:', children, 'CurrentChildId:', currentChildId); // Debug log
+  console.log('Current child:', currentChild, 'Children:', children, 'CurrentChildId:', currentChildId);
 
   return (
     <div className="relative">
@@ -139,7 +171,7 @@ const ChildSelector: React.FC<ChildSelectorProps> = ({
                   setIsOpen(false);
                   onAddClick?.();
                 }}
-                className="flex items sparing gap-2 w-full text-left px-4 py-2 text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 mt-1"
+                className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-gray-700 border-t border-gray-100 dark:border-gray-700 mt-1"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Child</span>

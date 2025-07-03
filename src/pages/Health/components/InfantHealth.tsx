@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Plus, X, Clock, Calendar, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -59,7 +59,7 @@ const InfantHealth = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [newRecord, setNewRecord] = useState<Partial<HealthRecord>>({
-    type: 'medication',
+    type: 'Vaccination',
     title: '',
     date: new Date().toISOString().split('T')[0],
     priority: 'medium'
@@ -72,21 +72,78 @@ const InfantHealth = () => {
     isOpen: false,
     message: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const record: HealthRecord = {
-      id: Date.now().toString(),
-      ...newRecord as HealthRecord
+  // Fetch health records on component mount
+  useEffect(() => {
+    const fetchRecords = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+        const response = await fetch('http://localhost:5000/api/health_records', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setRecords(data.records);
+        } else {
+          setError(data.error || 'Failed to fetch health records');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching records');
+      } finally {
+        setLoading(false);
+      }
     };
-    setRecords(prev => [record, ...prev]);
-    setShowAddModal(false);
-    setNewRecord({
-      type: 'medication',
-      title: '',
-      date: new Date().toISOString().split('T')[0],
-      priority: 'medium'
-    });
+    fetchRecords();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/health_records', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          record_type: newRecord.type,
+          title: newRecord.title,
+          date: newRecord.date,
+          time: newRecord.time,
+          dosage: newRecord.dosage,
+          priority: newRecord.priority,
+          notes: newRecord.notes
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setRecords(prev => [{ id: data.record_id.toString(), ...newRecord } as HealthRecord, ...prev]);
+        setShowAddModal(false);
+        setNewRecord({
+          type: 'medication',
+          title: '',
+          date: new Date().toISOString().split('T')[0],
+          priority: 'medium'
+        });
+      } else {
+        setError(data.error || 'Failed to add health record');
+      }
+    } catch (err) {
+      setError('An error occurred while adding the record');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const initiateDelete = (id: string) => {
@@ -97,11 +154,32 @@ const InfantHealth = () => {
     });
   };
 
-  const deleteRecord = () => {
+  const deleteRecord = async () => {
     if (confirmDialog.recordId) {
-      setRecords(prev => prev.filter(record => record.id !== confirmDialog.recordId));
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:5000/api/health_records/${confirmDialog.recordId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setRecords(prev => prev.filter(record => record.id !== confirmDialog.recordId));
+        } else {
+          setError(data.error || 'Failed to delete health record');
+        }
+      } catch (err) {
+        setError('An error occurred while deleting the record');
+      } finally {
+        setLoading(false);
+        setConfirmDialog({ isOpen: false, message: '' });
+      }
     }
-    setConfirmDialog({ isOpen: false, message: '' });
   };
 
   const sortedRecords = [...records].sort((a, b) => 
@@ -118,25 +196,31 @@ const InfantHealth = () => {
           Infant Health Records
         </h2>
         
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-100 text-red-600 rounded-lg mb-4">
+            <AlertTriangle className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="text-center text-gray-600 dark:text-gray-400 py-4">
+            Loading...
+          </div>
+        )}
+
+        <div className="flex justify-center mb-4">
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center justify-center gap-2 p-3 bg-violet-50 dark:bg-gray-700 rounded-xl text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-gray-600"
+            disabled={loading}
           >
             <Plus className="w-5 h-5" />
             <span>Add New Record</span>
           </button>
-          <button
-            onClick={() => setShowHistory(prev => !prev)}
-            className="flex items-center justify-center gap-2 p-3 bg-violet-50 dark:bg-gray-700 rounded-xl text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-gray-600"
-          >
-            <FileText className="w-5 h-5" />
-            <span>View History</span>
-            {showHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
         </div>
 
-        {records.length > 0 ? (
+        {!loading && records.length > 0 ? (
           <div className="space-y-3">
             {/* Recent Records */}
             {recentRecords.map(record => (
@@ -165,7 +249,7 @@ const InfantHealth = () => {
               </div>
             )}
           </div>
-        ) : (
+        ) : !loading && (
           <p className="text-center text-gray-500 dark:text-gray-400 py-4">
             No health records added yet
           </p>
@@ -198,10 +282,14 @@ const InfantHealth = () => {
                   onChange={(e) => setNewRecord({ ...newRecord, type: e.target.value as HealthRecord['type'] })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   required
+                  disabled={loading}
                 >
-                  <option value="medication">Medication</option>
-                  <option value="prescription">Prescription</option>
-                  <option value="record">General Record</option>
+                  <option value="Vaccination">Vaccination</option>
+                  <option value="Checkup">Checkup</option>
+                  <option value="Growth">Growth</option>
+                  <option value="Medical">Medical</option>
+                  <option value="Milestone">Milestone</option>
+                  <option value="Allergy">Allergy</option>
                 </select>
               </div>
 
@@ -215,6 +303,7 @@ const InfantHealth = () => {
                   onChange={(e) => setNewRecord({ ...newRecord, title: e.target.value })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -229,6 +318,7 @@ const InfantHealth = () => {
                     onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })}
                     className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div>
@@ -237,24 +327,26 @@ const InfantHealth = () => {
                   </label>
                   <input
                     type="time"
-                    value={newRecord.time}
+                    value={newRecord.time || ""}
                     onChange={(e) => setNewRecord({ ...newRecord, time: e.target.value })}
                     className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    disabled={loading}
                   />
                 </div>
               </div>
 
-              {(newRecord.type === 'medication' || newRecord.type === 'prescription') && (
+              {(newRecord.type === 'Medical' || newRecord.type === 'Vaccination') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Dosage
                   </label>
                   <input
                     type="text"
-                    value={newRecord.dosage}
+                    value={newRecord.dosage || ""}
                     onChange={(e) => setNewRecord({ ...newRecord, dosage: e.target.value })}
                     className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     placeholder="e.g., 5ml twice daily"
+                    disabled={loading}
                   />
                 </div>
               )}
@@ -267,6 +359,7 @@ const InfantHealth = () => {
                   value={newRecord.priority}
                   onChange={(e) => setNewRecord({ ...newRecord, priority: e.target.value as HealthRecord['priority'] })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  disabled={loading}
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -279,19 +372,21 @@ const InfantHealth = () => {
                   Notes
                 </label>
                 <textarea
-                  value={newRecord.notes}
+                  value={newRecord.notes || ""}
                   onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   rows={3}
                   placeholder="Add any additional information..."
+                  disabled={loading}
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                className="w-full py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-violet-400"
+                disabled={loading}
               >
-                Add Record
+                {loading ? 'Adding...' : 'Add Record'}
               </button>
             </form>
           </div>
