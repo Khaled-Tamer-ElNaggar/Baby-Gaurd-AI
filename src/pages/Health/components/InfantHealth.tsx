@@ -155,32 +155,32 @@ const InfantHealth = () => {
   };
 
   const deleteRecord = async () => {
-    if (confirmDialog.recordId) {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/health_records/${confirmDialog.recordId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        const data = await response.json();
-        if (response.ok) {
-          setRecords(prev => prev.filter(record => record.id !== confirmDialog.recordId));
-        } else {
-          setError(data.error || 'Failed to delete health record');
+  if (confirmDialog.recordId) {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/health_records/${confirmDialog.recordId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (err) {
-        setError('An error occurred while deleting the record');
-      } finally {
-        setLoading(false);
-        setConfirmDialog({ isOpen: false, message: '' });
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setRecords(prev => prev.filter(record => record.id !== confirmDialog.recordId));
+      } else {
+        setError(data.error || 'Failed to delete health record');
       }
+    } catch (err) {
+      setError('An unexpected error occurred while deleting the record');
+    } finally {
+      setLoading(false);
+      setConfirmDialog({ isOpen: false, message: '' });
     }
-  };
+  }
+};
 
   const sortedRecords = [...records].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()

@@ -14,7 +14,7 @@ const PregnancyMilestone = () => {
   const [editData, setEditData] = useState({ ...babyData });
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch the latest growth record on component mount
+  // Fetch the latest growth record for today on component mount
   useEffect(() => {
     const loadBabyMetrics = async () => {
       try {
@@ -27,19 +27,28 @@ const PregnancyMilestone = () => {
         });
         const result = await response.json();
         if (response.ok && result.growth_records && result.growth_records.length > 0) {
-          const latestRecord = result.growth_records[0];
-          setBabyData({
-            size: latestRecord.head_circumference || '',
-            weight: latestRecord.weight || '',
-            height: latestRecord.height || '',
-            notes: latestRecord.notes || '',
-          });
-          setEditData({
-            size: latestRecord.head_circumference || '',
-            weight: latestRecord.weight || '',
-            height: latestRecord.height || '',
-            notes: latestRecord.notes || '',
-          });
+          // Find today's record
+          const today = new Date().toISOString().split('T')[0];
+          const todayRecord = result.growth_records.find(
+            (record: any) => record.record_date === today
+          );
+          if (todayRecord) {
+            setBabyData({
+              size: todayRecord.head_circumference || '',
+              weight: todayRecord.weight || '',
+              height: todayRecord.height || '',
+              notes: todayRecord.notes || '',
+            });
+            setEditData({
+              size: todayRecord.head_circumference || '',
+              weight: todayRecord.weight || '',
+              height: todayRecord.height || '',
+              notes: todayRecord.notes || '',
+            });
+          } else {
+            setBabyData({ size: '', weight: '', height: '', notes: '' });
+            setEditData({ size: '', weight: '', height: '', notes: '' });
+          }
         } else {
           setBabyData({ size: '', weight: '', height: '', notes: '' });
           setEditData({ size: '', weight: '', height: '', notes: '' });
@@ -53,18 +62,23 @@ const PregnancyMilestone = () => {
     loadBabyMetrics();
   }, []);
 
-  // Handle save action to update or create a growth record
+  // Handle save action to update today's growth record
   const handleSave = async () => {
     try {
-      const payload = {
-        weight: parseFloat(editData.weight) || 0,
-        height: parseFloat(editData.height) || 0,
-        head_circumference: parseFloat(editData.size) || 0,
-        notes: editData.notes || null,
-      };
+      // Only include fields that have changed or are non-empty
+      const payload: any = {};
+      if (editData.weight) payload.weight = parseFloat(editData.weight) || 0;
+      if (editData.height) payload.height = parseFloat(editData.height) || 0;
+      if (editData.size) payload.head_circumference = parseFloat(editData.size) || 0;
+      if (editData.notes) payload.notes = editData.notes;
+
+      if (Object.keys(payload).length === 0) {
+        setError('At least one field must be provided');
+        return;
+      }
 
       const response = await fetch('http://localhost:5000/api/baby-growth', {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -74,7 +88,7 @@ const PregnancyMilestone = () => {
 
       const result = await response.json();
       if (response.ok) {
-        setBabyData(editData);
+        setBabyData({ ...editData });
         updateBabyMetrics({
           size: editData.size,
           weight: editData.weight,
@@ -84,11 +98,11 @@ const PregnancyMilestone = () => {
         setIsEditing(false);
         setError(null);
       } else {
-        setError(result.error || 'Failed to save baby growth data');
+        setError(result.error || 'Failed to update baby growth data');
       }
     } catch (err) {
-      setError('Failed to save baby growth data');
-      console.error('Error saving baby metrics:', err);
+      setError('Failed to update baby growth data');
+      console.error('Error updating baby metrics:', err);
     }
   };
 

@@ -110,6 +110,32 @@ def get_health_records(current_user_id):
         return jsonify(records=records), 200
     except Error as e:
         return jsonify(error=f'Failed to fetch health records: {str(e)}'), 500
-    
 
 
+@health_records_bp.route('/api/health_records/<int:record_id>', methods=['DELETE'])
+@token_required
+def delete_health_record(current_user_id, record_id):
+    try:
+        with create_db_connection() as conn, conn.cursor(dictionary=True) as cur:
+            # First, verify that the record belongs to the current user's selected child
+            cur.execute("""
+                SELECT chr.id, chr.child_id, u.current_child_id
+                FROM child_health_records chr
+                JOIN users u ON chr.child_id = u.current_child_id
+                WHERE chr.id = %s AND u.id = %s
+            """, (record_id, current_user_id))
+            record = cur.fetchone()
+
+            if not record:
+                return jsonify(error='Record not found or not associated with this user'), 404
+
+            # Delete the health record
+            cur.execute("""
+                DELETE FROM child_health_records
+                WHERE id = %s
+            """, (record_id,))
+            conn.commit()
+
+            return jsonify(message='Health record deleted successfully'), 200
+    except Error as e:
+        return jsonify(error=f'Failed to delete health record: {str(e)}'), 500
