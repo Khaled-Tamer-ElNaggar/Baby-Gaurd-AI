@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Eye, X, Calendar, FileText } from 'lucide-react';
 import { useData } from '../../../contexts/DataContext';
 
 const VaccinationHistory = () => {
-  const { vaccinations, addVaccination, deleteVaccination } = useData();
+  const { vaccinations, setVaccinations } = useData();
   const [showModal, setShowModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [newVaccination, setNewVaccination] = useState({
@@ -12,16 +12,91 @@ const VaccinationHistory = () => {
     nextDue: '',
     notes: ''
   });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch vaccinations on component mount and when showHistory changes
+  useEffect(() => {
+    const fetchVaccinations = async () => {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found. Please log in.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:5000/api/vaccinations', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        console.log('Fetched Vaccinations:', data); // Debug log
+        if (response.ok) {
+          setVaccinations(data.vaccinations || []);
+        } else {
+          setError(data.error || 'Failed to fetch vaccinations');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching vaccinations');
+        console.error('Fetch Error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVaccinations();
+  }, [setVaccinations, showHistory]); // Re-fetch when showHistory changes
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addVaccination(newVaccination);
-    setNewVaccination({ name: '', date: '', nextDue: '', notes: '' });
-    setShowModal(false);
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('No authentication token found. Please log in.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/vaccinations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: newVaccination.name,
+          date: newVaccination.date,
+          nextDue: newVaccination.nextDue,
+          notes: newVaccination.notes
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setVaccinations(prev => [...prev, { id: data.vaccination_id.toString(), ...newVaccination }]);
+        setNewVaccination({ name: '', date: '', nextDue: '', notes: '' });
+        setShowModal(false);
+      } else {
+        setError(data.error || 'Failed to add vaccination');
+        console.error('API Error:', data);
+      }
+    } catch (err) {
+      setError('An error occurred while adding the vaccination');
+      console.error('Fetch Error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getNextVaccination = () => {
-    const future = vaccinations
+    const future = (vaccinations || [])
       .filter(v => v.nextDue && new Date(v.nextDue) > new Date())
       .sort((a, b) => new Date(a.nextDue!).getTime() - new Date(b.nextDue!).getTime())[0];
 
@@ -43,6 +118,7 @@ const VaccinationHistory = () => {
             <button
               onClick={() => setShowHistory(true)}
               className="flex items-center justify-center gap-2 p-3 bg-violet-50 dark:bg-gray-700 rounded-xl text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-gray-600"
+              disabled={loading}
             >
               <Eye className="w-5 h-5" />
               <span>View vaccinations</span>
@@ -50,6 +126,7 @@ const VaccinationHistory = () => {
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center justify-center gap-2 p-3 bg-violet-50 dark:bg-gray-700 rounded-xl text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-gray-600"
+              disabled={loading}
             >
               <Plus className="w-5 h-5" />
               <span>Add Vaccination</span>
@@ -77,6 +154,12 @@ const VaccinationHistory = () => {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              {error && (
+                <div className="text-red-600 mb-4">{error}</div>
+              )}
+              {loading && (
+                <div className="text-center text-gray-600 dark:text-gray-400 mb-4">Loading...</div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Vaccination Name
@@ -87,6 +170,7 @@ const VaccinationHistory = () => {
                   onChange={(e) => setNewVaccination({ ...newVaccination, name: e.target.value })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   required
+                  disabled={loading}
                 />
               </div>
               <div>
@@ -99,6 +183,7 @@ const VaccinationHistory = () => {
                   onChange={(e) => setNewVaccination({ ...newVaccination, date: e.target.value })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   required
+                  disabled={loading}
                 />
               </div>
               <div>
@@ -110,6 +195,7 @@ const VaccinationHistory = () => {
                   value={newVaccination.nextDue}
                   onChange={(e) => setNewVaccination({ ...newVaccination, nextDue: e.target.value })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  disabled={loading}
                 />
               </div>
               <div>
@@ -121,13 +207,15 @@ const VaccinationHistory = () => {
                   onChange={(e) => setNewVaccination({ ...newVaccination, notes: e.target.value })}
                   className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                   rows={3}
+                  disabled={loading}
                 />
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                className="w-full py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:bg-violet-400"
+                disabled={loading}
               >
-                Add Vaccination
+                {loading ? 'Adding...' : 'Add Vaccination'}
               </button>
             </form>
           </div>
@@ -150,13 +238,15 @@ const VaccinationHistory = () => {
               </button>
             </div>
             <div className="p-4 max-h-96 overflow-y-auto">
-              {vaccinations.length === 0 ? (
+              {loading ? (
+                <p className="text-center text-gray-600 dark:text-gray-400">Loading...</p>
+              ) : (vaccinations || []).length === 0 ? (
                 <p className="text-center text-gray-500 dark:text-gray-400">
                   No vaccinations recorded yet
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {vaccinations.map((vaccination) => (
+                  {(vaccinations || []).map((vaccination) => (
                     <div
                       key={vaccination.id}
                       className="bg-violet-50 dark:bg-gray-700 p-4 rounded-lg"
@@ -186,7 +276,7 @@ const VaccinationHistory = () => {
                         <button
                           onClick={() => {
                             if (confirm('Are you sure you want to delete this vaccination record?')) {
-                              deleteVaccination(vaccination.id);
+                              // Add delete API call here if needed
                             }
                           }}
                           className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -197,6 +287,9 @@ const VaccinationHistory = () => {
                     </div>
                   ))}
                 </div>
+              )}
+              {error && (
+                <div className="text-red-600 text-center mt-4">{error}</div>
               )}
             </div>
           </div>

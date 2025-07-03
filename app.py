@@ -13,6 +13,7 @@ from routes.trackers import trackers_bp
 from routes.gallery import gallery_bp
 from routes.child_Selector import children_selector_bp
 from routes.health_records import health_records_bp
+from routes.vaccinations import vaccinations_bp
 
 
 # ── 1. App setup ─────────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ app.register_blueprint(trackers_bp)
 app.register_blueprint(gallery_bp)
 app.register_blueprint(children_selector_bp)
 app.register_blueprint(health_records_bp)
+app.register_blueprint(vaccinations_bp)
 
 # ── 13. Dev entrypoint ───────────────────────────────────────────────────
 if __name__ == '__main__':
