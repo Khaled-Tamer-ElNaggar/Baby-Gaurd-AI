@@ -32,9 +32,9 @@ const Profile = () => {
     if (userDataString) {
       try {
         const userData = JSON.parse(userDataString);
-        setUsername(userData?.name || user?.name || 'Unknown');
+        setUsername(userData?.username || user?.name || 'Unknown');
         setEmail(userData?.email || user?.email || 'Not Provided');
-        setJoinDate(userData?.join_date || 'Unknown');
+        setJoinDate(userData?.joinDate || user?.join_date || 'Unknown');
       } catch (error) {
         console.error('Failed to parse userData from localStorage', error);
       }

@@ -18,6 +18,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  join_date?: string;
 }
 
 interface UserContextType {
@@ -49,8 +50,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = JSON.parse(userDataString);
         setUser({
           id: decoded.sub as string,
-          name: decoded.name as string || userData?.user_name,
-          email: decoded.email as string || userData?.user_email,
+          name: decoded.name as string || userData?.username,
+          email: decoded.email as string || userData?.email,
+          join_date: userData?.joinDate,
         });
         fetchChildren();
       } catch (error) {
@@ -158,11 +160,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: response.user_id,
         name: data.user_name,
         email: data.user_email,
+        join_date: response.join_date, // Include join_date if provided by backend
       });
       localStorage.setItem('userData', JSON.stringify({
-        user_id: response.user_id,
-        user_name: data.user_name,
-        user_email: data.user_email,
+        id: response.user_id,
+        username: data.user_name,
+        email: data.user_email,
+        joinDate: response.join_date, // Match Login.tsx naming
       }));
       navigate('/home');
     } catch (error) {
@@ -177,8 +181,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       const response = await auth.login(data);
-      setUser(response.user);
-      localStorage.setItem('userData', JSON.stringify(response.user));
+      setUser({
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        join_date: response.user.join_date,
+      });
+      localStorage.setItem('userData', JSON.stringify({
+        id: response.user.id,
+        username: response.user.name,
+        email: response.user.email,
+        joinDate: response.user.join_date,
+      }));
       await fetchChildren();
       navigate('/home');
     } catch (error) {
