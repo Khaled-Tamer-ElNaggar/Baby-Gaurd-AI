@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = ' http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -55,4 +55,4 @@ export const auth = {
   getToken: () => localStorage.getItem('token'),
 };
 
-export default api;
+export default ;
